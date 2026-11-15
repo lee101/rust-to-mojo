@@ -1,0 +1,9 @@
+fn sum_to [line 1]: translated
+fn sum_odd_inclusive [line 9]: translated
+fn countdown [line 20]: translated
+fn find_first_over [line 29]: translated
+fn evens [line 40]: translated
+fn sign [line 51]: translated
+fn classify [line 61]: partial
+    - `&str` return lowered to owned String
+total 7 translated 6 partial 1 stubbed 0 skipped 0

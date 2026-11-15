@@ -1,0 +1,9 @@
+struct Rgb [line 3]: translated
+method Rgb.fmt [line 11]: translated
+method Rgb.fmt [line 17]: translated
+method Rgb.default [line 27]: translated
+method Rgb.from [line 33]: translated
+fn white [line 42]: translated
+fn black [line 46]: translated
+fn fallback [line 51]: translated
+total 8 translated 8 partial 0 stubbed 0 skipped 0

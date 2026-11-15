@@ -1,0 +1,7 @@
+fn parse_digit [line 3]: partial
+    - Result<T, E> lowered to `raises` (error type erased)
+fn sum_two [line 11]: partial
+    - Result<T, E> lowered to `raises` (error type erased)
+fn check [line 17]: partial
+    - Result<T, E> lowered to `raises` (error type erased)
+total 3 translated 0 partial 3 stubbed 0 skipped 0

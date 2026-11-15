@@ -1,0 +1,15 @@
+struct Pixels [line 3]: partial
+    - derive(PartialOrd) over float fields: NaN ordering follows Mojo comparisons
+method Pixels.add [line 9]: translated
+method Pixels.sub [line 16]: translated
+method Pixels.mul [line 23]: translated
+method Pixels.__rmul__ (reflected Mul for f32) [line 30]: translated
+method Pixels.neg [line 37]: translated
+method Pixels.add_assign [line 43]: translated
+const Pixels.ZERO [line 49]: translated
+method Pixels.floor [line 51]: translated
+method Pixels.round [line 55]: translated
+method Pixels.abs [line 59]: translated
+method Pixels.max [line 63]: translated
+fn px [line 68]: translated
+total 13 translated 12 partial 1 stubbed 0 skipped 0

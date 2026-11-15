@@ -1,0 +1,6 @@
+struct Handle [line 1]: translated
+method Handle.clone [line 7]: translated
+method Handle.drop [line 13]: translated
+struct Tiny [line 18]: translated
+method Tiny.clone [line 22]: translated
+total 5 translated 5 partial 0 stubbed 0 skipped 0

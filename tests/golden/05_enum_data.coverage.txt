@@ -1,0 +1,8 @@
+enum Shape [line 1]: partial
+    - Debug on data enum maps to Variant's Writable (format differs from Rust)
+method Shape.area [line 9]: translated
+method Shape.describe [line 17]: partial
+    - `&str` return lowered to owned String
+fn unit_square [line 27]: translated
+fn nothing [line 31]: translated
+total 5 translated 3 partial 2 stubbed 0 skipped 0

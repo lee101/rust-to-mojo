@@ -1,0 +1,6 @@
+fn first_positive [line 1]: translated
+fn double_or_zero [line 10]: translated
+fn add_opts [line 17]: translated
+fn describe [line 23]: translated
+fn has [line 31]: translated
+total 5 translated 5 partial 0 stubbed 0 skipped 0

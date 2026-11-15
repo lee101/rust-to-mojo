@@ -1,0 +1,6 @@
+struct Buffer [line 1]: translated
+fn wrap [line 6]: translated
+fn rename [line 10]: translated
+fn shadow [line 14]: translated
+fn takes_twice [line 24]: translated
+total 5 translated 5 partial 0 stubbed 0 skipped 0

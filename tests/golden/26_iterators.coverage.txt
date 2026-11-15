@@ -1,0 +1,12 @@
+fn evens_squared [line 1]: translated
+fn total [line 5]: partial
+    - slice argument `&[T]` lowered to List[T] borrow
+fn count_big [line 9]: translated
+fn all_positive [line 13]: translated
+fn print_all [line 17]: translated
+fn sum_of_range [line 21]: translated
+fn unknown_source [line 25]: stubbed
+    - bound on a generic trait
+fn into_set [line 29]: stubbed
+    - `.collect()` into a non-Vec collection
+total 8 translated 5 partial 1 stubbed 2 skipped 0

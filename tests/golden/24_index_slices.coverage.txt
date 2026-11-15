@@ -1,0 +1,7 @@
+struct Grid [line 3]: translated
+method Grid.index [line 10]: translated
+method Grid.row [line 16]: stubbed
+    - returning a slice / trait-object reference
+method Grid.get [line 20]: translated
+method Grid.first [line 24]: translated
+total 5 translated 4 partial 0 stubbed 1 skipped 0

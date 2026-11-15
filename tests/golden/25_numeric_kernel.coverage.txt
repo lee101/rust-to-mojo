@@ -1,0 +1,4 @@
+fn dot [line 1]: translated
+fn matmul [line 9]: translated
+fn lerp [line 21]: translated
+total 3 translated 3 partial 0 stubbed 0 skipped 0

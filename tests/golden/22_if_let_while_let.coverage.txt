@@ -1,0 +1,6 @@
+fn pick [line 1]: translated
+fn drain [line 11]: translated
+fn chained [line 19]: translated
+fn let_else [line 26]: stubbed
+    - let-else
+total 4 translated 3 partial 0 stubbed 1 skipped 0

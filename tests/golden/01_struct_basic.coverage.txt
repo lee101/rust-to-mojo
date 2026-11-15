@@ -1,0 +1,8 @@
+struct Counter [line 1]: translated
+method Counter.new [line 11]: translated
+method Counter.get [line 16]: translated
+method Counter.tick [line 20]: translated
+method Counter.reset [line 24]: translated
+method Counter.is_positive [line 30]: translated
+fn make_default [line 35]: translated
+total 7 translated 7 partial 0 stubbed 0 skipped 0

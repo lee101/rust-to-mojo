@@ -1,0 +1,6 @@
+enum Axis [line 1]: translated
+method Axis.invert [line 11]: translated
+method Axis.is_vertical [line 18]: translated
+enum Corner [line 23]: translated
+fn corner_code [line 32]: translated
+total 5 translated 5 partial 0 stubbed 0 skipped 0

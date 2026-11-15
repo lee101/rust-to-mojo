@@ -1,0 +1,7 @@
+fn apply [line 1]: translated
+fn apply_twice [line 5]: translated
+fn typed_closure [line 9]: translated
+fn capturing [line 14]: translated
+fn untyped [line 19]: translated
+fn any_negative [line 23]: translated
+total 6 translated 6 partial 0 stubbed 0 skipped 0

@@ -1,0 +1,9 @@
+struct Pair [line 1]: translated
+fn swap [line 6]: translated
+fn sum_pair [line 11]: translated
+fn bucket [line 16]: translated
+fn quadrant [line 25]: translated
+fn nested [line 33]: translated
+fn first_of [line 41]: stubbed
+    - slice pattern
+total 7 translated 6 partial 0 stubbed 1 skipped 0

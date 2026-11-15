@@ -1,0 +1,11 @@
+struct Rgba [line 1]: translated
+struct Hsla [line 10]: translated
+fn rgba [line 19]: translated
+method Rgba.blend [line 28]: translated
+method Rgba.from [line 43]: partial
+    - float->int cast: Rust saturates, Mojo conversion of out-of-range values differs
+method Hsla.is_transparent [line 73]: translated
+method Hsla.opacity [line 77]: translated
+method Hsla.grayscale [line 86]: translated
+fn transparent_black [line 91]: translated
+total 9 translated 8 partial 1 stubbed 0 skipped 0

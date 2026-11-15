@@ -1,0 +1,11 @@
+struct Point [line 3]: translated
+fn point [line 9]: translated
+method Point.new [line 14]: translated
+method Point.swap [line 18]: translated
+method Point.max_coord [line 24]: partial
+    - method gated on an extra trait bound (`where conforms_to`)
+method Point.length [line 34]: partial
+    - impl specialised on a concrete type argument
+method Point.scale [line 38]: partial
+    - impl specialised on a concrete type argument
+total 7 translated 4 partial 3 stubbed 0 skipped 0

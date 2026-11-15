@@ -1,0 +1,16 @@
+fn greet [line 1]: translated
+fn named_args [line 5]: translated
+fn debug_fmt [line 9]: partial
+    - `{:?}` Debug formatting lowered to repr() (output format differs)
+fn precise [line 13]: stubbed
+    - unsupported format spec
+fn shout [line 17]: translated
+fn checked [line 23]: translated
+fn never [line 33]: translated
+fn logs [line 40]: partial
+    - logging macro dropped (no Mojo logging facade chosen)
+macro square [line 45]: stubbed
+    - `macro_rules!` definition (no Mojo macro system)
+fn uses_macro [line 51]: stubbed
+    - macro `square!`
+total 10 translated 5 partial 2 stubbed 3 skipped 0

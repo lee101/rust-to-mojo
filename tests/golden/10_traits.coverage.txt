@@ -1,0 +1,10 @@
+trait Shape [line 1]: translated
+trait Named [line 12]: translated
+struct Square [line 16]: translated
+method Square.area [line 25]: translated
+method Square.name [line 31]: translated
+fn total_area [line 36]: translated
+fn print_it [line 44]: translated
+fn boxed [line 48]: stubbed
+    - `&dyn Trait` argument (no existential types in Mojo)
+total 8 translated 7 partial 0 stubbed 1 skipped 0

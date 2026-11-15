@@ -1,0 +1,6 @@
+struct Style [line 1]: translated
+fn wide [line 8]: translated
+fn hidden [line 15]: translated
+fn from_fn [line 19]: translated
+fn make [line 23]: translated
+total 5 translated 5 partial 0 stubbed 0 skipped 0

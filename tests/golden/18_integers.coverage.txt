@@ -1,0 +1,13 @@
+fn rem_signed [line 1]: translated
+fn rem_float [line 5]: translated
+fn wrapping [line 9]: translated
+fn checked [line 13]: translated
+fn saturating [line 17]: translated
+fn casts [line 21]: partial
+    - float->int cast: Rust saturates, Mojo conversion of out-of-range values differs
+fn bits [line 27]: translated
+fn bools [line 31]: translated
+fn literals [line 35]: translated
+fn maxes [line 42]: translated
+fn pi_ish [line 46]: translated
+total 11 translated 10 partial 1 stubbed 0 skipped 0

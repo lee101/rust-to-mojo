@@ -1,0 +1,8 @@
+fn squares [line 3]: translated
+fn total [line 11]: partial
+    - slice argument `&[T]` lowered to List[T] borrow
+fn indexed [line 19]: translated
+fn word_counts [line 30]: translated
+fn sum_map [line 43]: translated
+fn literal [line 51]: translated
+total 6 translated 5 partial 1 stubbed 0 skipped 0

@@ -1,0 +1,8 @@
+struct Node [line 4]: translated
+fn shared [line 9]: partial
+    - Rc lowered to ArcPointer (atomic refcount)
+    - RefCell lowered to mojo_rt.cell.RefCell (no dynamic borrow checking)
+    - RefCell lowered to mojo_rt.cell.RefCell (no dynamic borrow checking)
+fn count [line 16]: partial
+    - Cell mutation needs `mut` access in Mojo (no interior mutability)
+total 3 translated 1 partial 2 stubbed 0 skipped 0
