@@ -86,7 +86,7 @@ borrowing Copy arguments instead of copying them, and Debug → Writable output 
 
 ## Results
 
-* **Golden tests:** 25 Rust inputs, each with its expected Mojo and expected per-item
+* **Golden tests:** 26 Rust inputs, each with its expected Mojo and expected per-item
   coverage (`tests/golden/*.rs`, `*.mojo`, `*.coverage.txt`). There is also a crate-mode
   layout test and a never-panic robustness test. See the
   [GPUI hand review](reports/gpui/geometry-review.md) for a critical read of real output.

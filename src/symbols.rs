@@ -50,6 +50,8 @@ pub struct Symbols {
     pub type_aliases: HashSet<String>,
     /// Types that derive or implement `Copy`.
     pub copy_types: HashSet<String>,
+    /// Types with a hand-written `Display` impl.
+    pub display_types: HashSet<String>,
     /// Module paths in the crate, joined with `::` (crate root = "").
     pub modules: HashSet<String>,
     pub crate_name: String,
@@ -148,6 +150,13 @@ impl Symbols {
                 }
                 Item::Impl(i) => {
                     if let Some((_, tp, _)) = &i.trait_ {
+                        if tp.segments.last().map(|s| s.ident == "Display").unwrap_or(false) {
+                            if let Type::Path(p) = &*i.self_ty {
+                                if let Some(seg) = p.path.segments.last() {
+                                    self.display_types.insert(seg.ident.to_string());
+                                }
+                            }
+                        }
                         if tp.segments.last().map(|s| s.ident == "Copy").unwrap_or(false) {
                             if let Type::Path(p) = &*i.self_ty {
                                 if let Some(seg) = p.path.segments.last() {

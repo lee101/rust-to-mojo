@@ -282,8 +282,6 @@ impl<'a> FileCtx<'a> {
         module.imports.extend(std::mem::take(&mut self.imports));
         // `from . import x` for pub child modules is only meaningful in packages.
         module.header_comments = header;
-        let hints = std::mem::take(&mut self.hints);
-        let _ = hints;
         ModuleOut { module, records, children, file_notes: std::mem::take(&mut self.file_notes), internal_errors, hints: vec![] }
     }
 
@@ -639,8 +637,10 @@ impl<'a> FileCtx<'a> {
                                 body: vec![MStmt::Expr(MExpr::method(MExpr::name("writer"), "write", vec![MExpr::Str(n.clone())]))],
                             })
                             .collect();
+                        // Debug is repr; it may only take `write_to` when there is no Display impl.
+                        let writer_name = if self.syms.display_types.contains(&name) { "write_repr_to" } else { "write_to" };
                         st.members.push(MMember::Method(MFunction {
-                            name: "write_to".into(),
+                            name: writer_name.into(),
                             params: vec![MParam { name: "W".into(), bound: Some("Writer".into()) }],
                             args: vec![self_arg(Conv::Default), MArg { conv: Conv::Mut, name: "writer".into(), ty: Some(MType::named("W")), kw_only: false }],
                             body: Some(vec![MStmt::If { arms, else_body: None }]),
@@ -1224,6 +1224,21 @@ impl<'a> FileCtx<'a> {
             if let Some(c) = cfg_of(&f.attrs) {
                 todos.push(Reason { key: "cfg-gated item translated unconditionally".into(), detail: format!("cfg({})", c) });
             }
+            // Rust allows an inherent method and a trait method with the same
+            // name; Mojo needs exactly one definition per signature.
+            let r = match r {
+                Ok(mf) => {
+                    let key = method_key(&mf);
+                    let clash = decls.get(&sn).map(|d| d.main.members.iter().any(|m| matches!(m, MMember::Method(o) if method_key(o) == key))).unwrap_or(false)
+                        || new_members.iter().any(|m| matches!(m, MMember::Method(o) if method_key(o) == key));
+                    if clash {
+                        Err(Unsupported { key: "method signature collides with another impl's method (Mojo needs one definition)".into(), detail: format!("{}.{}", sn, mf.name) })
+                    } else {
+                        Ok(mf)
+                    }
+                }
+                e => e,
+            };
             records.push(Self::record("method", &rec_name, f.span(), &r.as_ref().map(|_| ()), &todos));
             match r {
                 Ok(mut mf) => {
@@ -1697,6 +1712,12 @@ fn push_ext(header: &mut Vec<String>, krate: &str, full: &str) {
     } else {
         header.push(format!("{}{}", prefix, full));
     }
+}
+
+/// Overload identity: name + argument types/conventions + where clauses.
+fn method_key(f: &MFunction) -> String {
+    let args: Vec<String> = f.args.iter().map(|a| format!("{:?}:{}", a.conv, a.ty.as_ref().map(crate::printer::type_str).unwrap_or_default())).collect();
+    format!("{}({})|{}|{}", f.name, args.join(","), f.where_clauses.join("&"), f.params.len())
 }
 
 fn rust_fn_name(sig: &syn::Signature) -> String {
