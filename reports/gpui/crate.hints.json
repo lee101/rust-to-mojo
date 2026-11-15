@@ -1,0 +1,182 @@
+[
+  {
+    "file": "src/color.rs",
+    "item": "Rgba",
+    "kind": "simd-struct",
+    "message": "4 homogeneous float fields: candidate for `SIMD[DType.float32, 4]` storage so arithmetic dunders become single vector ops"
+  },
+  {
+    "file": "src/color.rs",
+    "item": "Hsla",
+    "kind": "simd-struct",
+    "message": "4 homogeneous float fields: candidate for `SIMD[DType.float32, 4]` storage so arithmetic dunders become single vector ops"
+  },
+  {
+    "file": "src/color.rs",
+    "item": "blend",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/color.rs",
+    "item": "from_",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/color.rs",
+    "item": "from_",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/geometry.rs",
+    "item": "Point",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/geometry.rs",
+    "item": "Size",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/geometry.rs",
+    "item": "Edges",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/geometry.rs",
+    "item": "Corners",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/geometry.rs",
+    "item": "from_anchor_and_size",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/gestures.rs",
+    "item": "fling_distance",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/gestures.rs",
+    "item": "quadratic_velocity_at_newest",
+    "kind": "autotune",
+    "message": "tight arithmetic loop with no calls: candidate for `comptime` unrolling / autotuned tile sizes"
+  },
+  {
+    "file": "src/path_winding.rs",
+    "item": "Cell",
+    "kind": "simd-struct",
+    "message": "4 homogeneous float fields: candidate for `SIMD[DType.float32, 4]` storage so arithmetic dunders become single vector ops"
+  },
+  {
+    "file": "src/path_winding.rs",
+    "item": "covering",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/platform.rs",
+    "item": "get_gamma_correction_ratios",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/scene.rs",
+    "item": "compose",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/spring.rs",
+    "item": "SpringConfig",
+    "kind": "simd-struct",
+    "message": "3 homogeneous float fields: candidate for `SIMD[DType.float32, 4]` storage so arithmetic dunders become single vector ops"
+  },
+  {
+    "file": "src/spring.rs",
+    "item": "SpringState",
+    "kind": "simd-struct",
+    "message": "2 homogeneous float fields: candidate for `SIMD[DType.float32, 2]` storage so arithmetic dunders become single vector ops"
+  },
+  {
+    "file": "src/spring.rs",
+    "item": "step",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/spring.rs",
+    "item": "step_ramp",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/queue.rs",
+    "item": "SendError",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/elements/div.rs",
+    "item": "Stateful",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "src/elements/text.rs",
+    "item": "apply_font_family_overrides",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/elements/text.rs",
+    "item": "wrapped_text",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/gestures.rs#mod friction_spline",
+    "item": "distance_coefficient",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
+    "file": "src/text_system/line_layout.rs",
+    "item": "index_for_x",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/text_system/line_layout.rs",
+    "item": "closest_index_for_x",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/text_system/line_layout.rs",
+    "item": "x_for_index",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/text_system/line_layout.rs",
+    "item": "font_id_for_index",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  },
+  {
+    "file": "src/text_system/line_layout.rs",
+    "item": "apply_force_width_to_layout",
+    "kind": "parallelize",
+    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
+  }
+]

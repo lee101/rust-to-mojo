@@ -1,0 +1,966 @@
+{
+  "tool": "rust-to-mojo 0.1.0",
+  "mojo_target": "Mojo 1.0 (Modular 26.5, Aug 2026): def-only functions, comptime, Deinitable, Array, std.* imports",
+  "crate_name": "color",
+  "counts": {
+    "total": 75,
+    "translated": 40,
+    "partial": 11,
+    "stubbed": 23,
+    "skipped": 1
+  },
+  "emitted_pct": 68.91891891891892,
+  "clean_pct": 54.054054054054056,
+  "internal_errors": 0,
+  "stub_reasons": [
+    {
+      "key": "impl of external trait `JsonSchema`",
+      "count": 4,
+      "example": "JsonSchema for Rgba"
+    },
+    {
+      "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
+      "count": 2,
+      "example": "Hsla"
+    },
+    {
+      "key": "impl of external trait `Deserialize`",
+      "count": 2,
+      "example": "Deserialize for Rgba"
+    },
+    {
+      "key": "impl of external trait `Serialize`",
+      "count": 2,
+      "example": "Serialize for Rgba"
+    },
+    {
+      "key": "impl of external trait `Visitor`",
+      "count": 2,
+      "example": "Visitor for RgbaVisitor"
+    },
+    {
+      "key": "std method `.to_be_bytes()` not mapped",
+      "count": 2,
+      "example": "hex.to_be_bytes()"
+    },
+    {
+      "key": "unsupported format spec",
+      "count": 2,
+      "example": "format spec `{:#010x}`"
+    },
+    {
+      "key": "`.into()` without a known target type",
+      "count": 1,
+      "example": "from.into()"
+    },
+    {
+      "key": "impl of std trait `Hash` (no Mojo mapping yet)",
+      "count": 1,
+      "example": "Hash for Hsla"
+    },
+    {
+      "key": "impl of std trait `Ord` (no Mojo mapping yet)",
+      "count": 1,
+      "example": "Ord for Hsla"
+    },
+    {
+      "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
+      "count": 1,
+      "example": "PartialOrd for Hsla"
+    },
+    {
+      "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+      "count": 1,
+      "example": "TryFrom for Rgba"
+    },
+    {
+      "key": "impl on a std/primitive type (Mojo has no extensions)",
+      "count": 1,
+      "example": "From for u32"
+    },
+    {
+      "key": "std method `.total_cmp()` not mapped",
+      "count": 1,
+      "example": "self.h.total_cmp(&other.h)"
+    }
+  ],
+  "partial_reasons": [
+    {
+      "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+      "count": 6,
+      "example": "(color[0] as f32 / a) as u8"
+    },
+    {
+      "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+      "count": 4,
+      "example": "Solid({:?})"
+    },
+    {
+      "key": "derive `Deserialize` has no Mojo equivalent",
+      "count": 4,
+      "example": "#[derive(Deserialize)] dropped"
+    },
+    {
+      "key": "derive `JsonSchema` has no Mojo equivalent",
+      "count": 4,
+      "example": "#[derive(JsonSchema)] dropped"
+    },
+    {
+      "key": "derive `Serialize` has no Mojo equivalent",
+      "count": 4,
+      "example": "#[derive(Serialize)] dropped"
+    },
+    {
+      "key": "dropped bound `Into` (no Mojo std trait)",
+      "count": 4,
+      "example": "`F1: Into<Hsla>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "method `.swap()` on a value of unknown type passed through",
+      "count": 1,
+      "example": "color.swap(0, 2)"
+    },
+    {
+      "key": "slice argument `&[T]` lowered to List[T] borrow",
+      "count": 1,
+      "example": "callers passing sub-slices need Span[T, origin]"
+    }
+  ],
+  "file_notes": [
+    {
+      "key": "external crate `anyhow`",
+      "count": 1,
+      "example": "anyhow::bail"
+    },
+    {
+      "key": "external crate `proptest`",
+      "count": 1,
+      "example": "proptest::prelude::*"
+    },
+    {
+      "key": "external crate `schemars`",
+      "count": 1,
+      "example": "schemars::JsonSchema"
+    },
+    {
+      "key": "external crate `serde`",
+      "count": 1,
+      "example": "serde::Deserialize"
+    }
+  ],
+  "files": [
+    {
+      "source": "color.rs",
+      "output": "color/__init__.mojo",
+      "module": "color",
+      "counts": {
+        "total": 73,
+        "translated": 40,
+        "partial": 11,
+        "stubbed": 21,
+        "skipped": 1
+      },
+      "parse_error": null,
+      "file_notes": [
+        {
+          "key": "external crate `anyhow`",
+          "detail": "anyhow::bail"
+        },
+        {
+          "key": "external crate `schemars`",
+          "detail": "schemars::JsonSchema"
+        },
+        {
+          "key": "external crate `serde`",
+          "detail": "serde::Deserialize"
+        }
+      ],
+      "items": [
+        {
+          "kind": "fn",
+          "name": "rgb",
+          "line": 13,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "std method `.to_be_bytes()` not mapped",
+              "detail": "hex.to_be_bytes()"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "rgba",
+          "line": 19,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "std method `.to_be_bytes()` not mapped",
+              "detail": "hex.to_be_bytes()"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "swap_rgba_pa_to_bgra",
+          "line": 25,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "slice argument `&[T]` lowered to List[T] borrow",
+              "detail": "callers passing sub-slices need Span[T, origin]"
+            },
+            {
+              "key": "method `.swap()` on a value of unknown type passed through",
+              "detail": "color.swap(0, 2)"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(color[0] as f32 / a) as u8"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(color[1] as f32 / a) as u8"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(color[2] as f32 / a) as u8"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Rgba",
+          "line": 36,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.fmt",
+          "line": 51,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "unsupported format spec",
+              "detail": "format spec `{:#010x}`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.blend",
+          "line": 57,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.alpha",
+          "line": 73,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.opacity",
+          "line": 104,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "u32.from",
+          "line": 137,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u32"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "RgbaVisitor",
+          "line": 146,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "RgbaVisitor.expecting",
+          "line": 151,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Visitor`",
+              "detail": "Visitor for RgbaVisitor"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "RgbaVisitor.visit_str",
+          "line": 155,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Visitor`",
+              "detail": "Visitor for RgbaVisitor"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.schema_name",
+          "line": 161,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Rgba"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.json_schema",
+          "line": 165,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Rgba"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.deserialize",
+          "line": 174,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Deserialize`",
+              "detail": "Deserialize for Rgba"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.serialize",
+          "line": 180,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Serialize`",
+              "detail": "Serialize for Rgba"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.from",
+          "line": 195,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(h * 6.0).floor() as i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rgba.try_from",
+          "line": 227,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for Rgba"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Hsla",
+          "line": 331,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.eq",
+          "line": 375,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "std method `.total_cmp()` not mapped",
+              "detail": "self.h.total_cmp(&other.h)"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.partial_cmp",
+          "line": 385,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
+              "detail": "PartialOrd for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.cmp",
+          "line": 391,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Ord` (no Mojo mapping yet)",
+              "detail": "Ord for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.hash",
+          "line": 402,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Hash` (no Mojo mapping yet)",
+              "detail": "Hash for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.fmt",
+          "line": 411,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "unsupported format spec",
+              "detail": "format spec `{:.2}`"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "hsla",
+          "line": 423,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "black",
+          "line": 433,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "transparent_black",
+          "line": 443,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "transparent_white",
+          "line": 453,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "opaque_grey",
+          "line": 463,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "white",
+          "line": 473,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "red",
+          "line": 483,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "blue",
+          "line": 493,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "green",
+          "line": 503,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "yellow",
+          "line": 513,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.to_rgb",
+          "line": 524,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.red",
+          "line": 529,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.green",
+          "line": 534,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.blue",
+          "line": 539,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.black",
+          "line": 544,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.white",
+          "line": 549,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.transparent_black",
+          "line": 554,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.is_transparent",
+          "line": 559,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.is_opaque",
+          "line": 564,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.blend",
+          "line": 569,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.grayscale",
+          "line": 595,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.fade_out",
+          "line": 605,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.opacity",
+          "line": 611,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.alpha",
+          "line": 646,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.from",
+          "line": 678,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.schema_name",
+          "line": 716,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.json_schema",
+          "line": 720,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.serialize",
+          "line": 726,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Serialize`",
+              "detail": "Serialize for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.deserialize",
+          "line": 735,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Deserialize`",
+              "detail": "Deserialize for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "BackgroundTag",
+          "line": 743,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "ColorSpace",
+          "line": 752,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ColorSpace.fmt",
+          "line": 768,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Background",
+          "line": 776,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Background.fmt",
+          "line": 790,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+              "detail": "Solid({:?})"
+            },
+            {
+              "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+              "detail": "LinearGradient({}, {:?}, {:?})"
+            },
+            {
+              "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+              "detail": "PatternSlash({:?}, {})"
+            },
+            {
+              "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+              "detail": "Checkerboard({:?}, {})"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Background.default",
+          "line": 814,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "pattern_slash",
+          "line": 826,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Into` (no Mojo std trait)",
+              "detail": "`F1: Into<Hsla>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(width * 255.0) as u32"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(interval * 255.0) as u32"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "checkerboard",
+          "line": 840,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Into` (no Mojo std trait)",
+              "detail": "`F1: Into<Hsla>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "solid_background",
+          "line": 850,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Into` (no Mojo std trait)",
+              "detail": "`F1: Into<Hsla>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "linear_gradient",
+          "line": 858,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "from.into()"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "LinearColorStop",
+          "line": 878,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "linear_color_stop",
+          "line": 890,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Into` (no Mojo std trait)",
+              "detail": "`F1: Into<Hsla>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "LinearColorStop.opacity",
+          "line": 901,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.as_solid",
+          "line": 911,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.color_space",
+          "line": 920,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.opacity",
+          "line": 928,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.is_transparent",
+          "line": 939,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.from",
+          "line": 951,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Background.from",
+          "line": 961,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "mod",
+          "name": "tests",
+          "line": 970,
+          "status": "skipped",
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "source": "color.rs#mod property",
+      "output": "color/property.mojo",
+      "module": "color.property",
+      "counts": {
+        "total": 2,
+        "translated": 0,
+        "partial": 0,
+        "stubbed": 2,
+        "skipped": 0
+      },
+      "parse_error": null,
+      "file_notes": [
+        {
+          "key": "external crate `proptest`",
+          "detail": "proptest::prelude::*"
+        }
+      ],
+      "items": [
+        {
+          "kind": "method",
+          "name": "Hsla.opaque_strategy",
+          "line": 354,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
+              "detail": "Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.arbitrary_with",
+          "line": 366,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
+              "detail": "Arbitrary for Hsla"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

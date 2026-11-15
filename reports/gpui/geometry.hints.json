@@ -1,0 +1,32 @@
+[
+  {
+    "file": "geometry.rs",
+    "item": "Point",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "geometry.rs",
+    "item": "Size",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "geometry.rs",
+    "item": "Edges",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "geometry.rs",
+    "item": "Corners",
+    "kind": "dtype-param",
+    "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
+  },
+  {
+    "file": "geometry.rs",
+    "item": "from_anchor_and_size",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  }
+]

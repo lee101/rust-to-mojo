@@ -1,0 +1,3302 @@
+{
+  "tool": "rust-to-mojo 0.1.0",
+  "mojo_target": "Mojo 1.0 (Modular 26.5, Aug 2026): def-only functions, comptime, Deinitable, Array, std.* imports",
+  "crate_name": "geometry",
+  "counts": {
+    "total": 286,
+    "translated": 127,
+    "partial": 101,
+    "stubbed": 57,
+    "skipped": 1
+  },
+  "emitted_pct": 80.0,
+  "clean_pct": 44.56140350877193,
+  "internal_errors": 0,
+  "stub_reasons": [
+    {
+      "key": "impl on a std/primitive type (Mojo has no extensions)",
+      "count": 14,
+      "example": "From for f32"
+    },
+    {
+      "key": "`.into()` without a known target type",
+      "count": 12,
+      "example": "size.width.into()"
+    },
+    {
+      "key": "impl of external trait `JsonSchema`",
+      "count": 6,
+      "example": "JsonSchema for AbsoluteLength"
+    },
+    {
+      "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+      "count": 5,
+      "example": "TryFrom for Pixels"
+    },
+    {
+      "key": "impl of std trait `Sum` (no Mojo mapping yet)",
+      "count": 4,
+      "example": "Sum for Pixels"
+    },
+    {
+      "key": "impl of external trait `Deserialize`",
+      "count": 3,
+      "example": "Deserialize for AbsoluteLength"
+    },
+    {
+      "key": "impl of external trait `Serialize`",
+      "count": 3,
+      "example": "Serialize for AbsoluteLength"
+    },
+    {
+      "key": "closure with untyped parameters (needs type inference)",
+      "count": 2,
+      "example": "| id | cx.find_display(id)"
+    },
+    {
+      "key": "impl of std trait `Ord` (no Mojo mapping yet)",
+      "count": 2,
+      "example": "Ord for Pixels"
+    },
+    {
+      "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
+      "count": 2,
+      "example": "PartialOrd for Pixels"
+    },
+    {
+      "key": "closure without a return type annotation (needs type inference)",
+      "count": 1,
+      "example": "| | point.relative_to(&self.origin)"
+    },
+    {
+      "key": "impl of std trait `Hash` (no Mojo mapping yet)",
+      "count": 1,
+      "example": "Hash for Pixels"
+    },
+    {
+      "key": "method signature collides with another impl's method (Mojo needs one definition)",
+      "count": 1,
+      "example": "AbsoluteLength.is_zero"
+    },
+    {
+      "key": "std path with no Mojo mapping",
+      "count": 1,
+      "example": "std::f32::consts::GOLDEN_RATIO"
+    }
+  ],
+  "partial_reasons": [
+    {
+      "key": "dropped bound `Add` (no Mojo std trait)",
+      "count": 34,
+      "example": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "method gated on an extra trait bound (`where conforms_to`)",
+      "count": 31,
+      "example": "Self.T: Comparable"
+    },
+    {
+      "key": "impl specialised on a concrete type argument",
+      "count": 20,
+      "example": "method gated with `where Self.T == Pixels`"
+    },
+    {
+      "key": "dropped bound `Sub` (no Mojo std trait)",
+      "count": 12,
+      "example": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "derive `Deserialize` has no Mojo equivalent",
+      "count": 10,
+      "example": "#[derive(Deserialize)] dropped"
+    },
+    {
+      "key": "derive `Serialize` has no Mojo equivalent",
+      "count": 10,
+      "example": "#[derive(Serialize)] dropped"
+    },
+    {
+      "key": "dropped bound `Mul` (no Mojo std trait)",
+      "count": 10,
+      "example": "`T: Mul<Rhs, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+      "count": 6,
+      "example": "(self.width.0 * scale_factor).round() as i32"
+    },
+    {
+      "key": "derive `Refineable` has no Mojo equivalent",
+      "count": 5,
+      "example": "#[derive(Refineable)] dropped"
+    },
+    {
+      "key": "derive `JsonSchema` has no Mojo equivalent",
+      "count": 4,
+      "example": "#[derive(JsonSchema)] dropped"
+    },
+    {
+      "key": "dropped bound `Div` (no Mojo std trait)",
+      "count": 3,
+      "example": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "derive `Neg` has no Mojo equivalent",
+      "count": 2,
+      "example": "#[derive(Neg)] dropped"
+    },
+    {
+      "key": "derive(Add) on generic struct needs the parameter to support the operator",
+      "count": 2,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "derive(Neg) on generic struct needs the parameter to support the operator",
+      "count": 2,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "derive(Sub) on generic struct needs the parameter to support the operator",
+      "count": 2,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "Debug on data enum maps to Variant's Writable (format differs from Rust)",
+      "count": 1,
+      "example": "GridPlacement"
+    },
+    {
+      "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+      "count": 1,
+      "example": "Size {{ {:?} × {:?} }}"
+    },
+    {
+      "key": "derive(AddAssign) on generic struct needs the parameter to support the operator",
+      "count": 1,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "derive(Div) on generic struct needs the parameter to support the operator",
+      "count": 1,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "derive(SubAssign) on generic struct needs the parameter to support the operator",
+      "count": 1,
+      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+    },
+    {
+      "key": "dropped bound `Neg` (no Mojo std trait)",
+      "count": 1,
+      "example": "`T: Neg<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+    },
+    {
+      "key": "method `.rem_size()` on a value of unknown type passed through",
+      "count": 1,
+      "example": "window.rem_size()"
+    }
+  ],
+  "file_notes": [
+    {
+      "key": "external crate `anyhow`",
+      "count": 1,
+      "example": "anyhow::anyhow"
+    },
+    {
+      "key": "external crate `derive_more`",
+      "count": 1,
+      "example": "derive_more::Add"
+    },
+    {
+      "key": "external crate `refineable`",
+      "count": 1,
+      "example": "refineable::Refineable"
+    },
+    {
+      "key": "external crate `schemars`",
+      "count": 1,
+      "example": "schemars::JsonSchema"
+    },
+    {
+      "key": "external crate `serde`",
+      "count": 1,
+      "example": "serde::Deserialize"
+    },
+    {
+      "key": "external crate `taffy`",
+      "count": 1,
+      "example": "taffy::prelude::TaffyGridLine"
+    }
+  ],
+  "files": [
+    {
+      "source": "geometry.rs",
+      "output": "geometry.mojo",
+      "module": "geometry",
+      "counts": {
+        "total": 286,
+        "translated": 127,
+        "partial": 101,
+        "stubbed": 57,
+        "skipped": 1
+      },
+      "parse_error": null,
+      "file_notes": [
+        {
+          "key": "external crate `anyhow`",
+          "detail": "anyhow::anyhow"
+        },
+        {
+          "key": "external crate `derive_more`",
+          "detail": "derive_more::Add"
+        },
+        {
+          "key": "external crate `refineable`",
+          "detail": "refineable::Refineable"
+        },
+        {
+          "key": "external crate `schemars`",
+          "detail": "schemars::JsonSchema"
+        },
+        {
+          "key": "external crate `serde`",
+          "detail": "serde::Deserialize"
+        },
+        {
+          "key": "external crate `taffy`",
+          "detail": "taffy::prelude::TaffyGridLine"
+        }
+      ],
+      "items": [
+        {
+          "kind": "enum",
+          "name": "Axis",
+          "line": 23,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Axis.invert",
+          "line": 33,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "trait",
+          "name": "Along",
+          "line": 42,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Point",
+          "line": 54,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Refineable` has no Mojo equivalent",
+              "detail": "#[derive(Refineable)] dropped"
+            },
+            {
+              "key": "derive(Add) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive(AddAssign) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive(Sub) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive(SubAssign) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            },
+            {
+              "key": "derive(Neg) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "point",
+          "line": 92,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.new",
+          "line": 116,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.map",
+          "line": 135,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.along",
+          "line": 165,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.apply_along",
+          "line": 172,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.scale",
+          "line": 187,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.magnitude",
+          "line": 209,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.relative_to",
+          "line": 227,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.mul",
+          "line": 243,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<Rhs, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.mul_assign",
+          "line": 256,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.div",
+          "line": 269,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Div` (no Mojo std trait)",
+              "detail": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.max",
+          "line": 281,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.min",
+          "line": 311,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.clamp",
+          "line": 341,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.clone",
+          "line": 373,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.fmt",
+          "line": 382,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Size",
+          "line": 387,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive(Add) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive(Div) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive(Neg) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            },
+            {
+              "key": "derive `Refineable` has no Mojo equivalent",
+              "detail": "#[derive(Refineable)] dropped"
+            },
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive(Sub) on generic struct needs the parameter to support the operator",
+              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.new",
+          "line": 404,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "size",
+          "line": 410,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.map",
+          "line": 436,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.center",
+          "line": 469,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.scale",
+          "line": 479,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.along",
+          "line": 511,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.apply_along",
+          "line": 518,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.max",
+          "line": 537,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.min",
+          "line": 567,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.mul",
+          "line": 605,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.mul_assign",
+          "line": 618,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.fmt",
+          "line": 630,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
+              "detail": "Size {{ {:?} × {:?} }}"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.fmt",
+          "line": 636,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.from",
+          "line": 642,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Size.from",
+          "line": 651,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "size.width.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.from",
+          "line": 660,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "size.width.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.full",
+          "line": 669,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "relative(1.).into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.auto",
+          "line": 686,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Length`"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Bounds",
+          "line": 703,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Refineable` has no Mojo equivalent",
+              "detail": "#[derive(Refineable)] dropped"
+            },
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "bounds",
+          "line": 730,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.centered",
+          "line": 739,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "closure with untyped parameters (needs type inference)",
+              "detail": "| id | cx.find_display(id)"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.maximized",
+          "line": 756,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "closure with untyped parameters (needs type inference)",
+              "detail": "| id | cx.find_display(id)"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.new",
+          "line": 775,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.from_corners",
+          "line": 794,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.from_anchor_and_size",
+          "line": 838,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.centered_at",
+          "line": 881,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.top_center",
+          "line": 895,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.bottom_center",
+          "line": 903,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.left_center",
+          "line": 911,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.right_center",
+          "line": 919,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.intersects",
+          "line": 932,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.center",
+          "line": 980,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.half_perimeter",
+          "line": 1013,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.dilate",
+          "line": 1040,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.extend",
+          "line": 1075,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.inset",
+          "line": 1099,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Neg` (no Mojo std trait)",
+              "detail": "`T: Neg<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.intersect",
+          "line": 1110,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.union",
+          "line": 1152,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.join",
+          "line": 1191,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.space_within",
+          "line": 1227,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.mul",
+          "line": 1246,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.mul_assign",
+          "line": 1259,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.div",
+          "line": 1273,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Div` (no Mojo std trait)",
+              "detail": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.add",
+          "line": 1287,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.sub",
+          "line": 1301,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Sub` (no Mojo std trait)",
+              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Point.from",
+          "line": 1310,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.top",
+          "line": 1322,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.bottom",
+          "line": 1331,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.left",
+          "line": 1340,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.right",
+          "line": 1349,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.top_right",
+          "line": 1358,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.bottom_right",
+          "line": 1382,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.bottom_left",
+          "line": 1406,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.corner",
+          "line": 1435,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.contains",
+          "line": 1470,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.is_contained_within",
+          "line": 1506,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.map",
+          "line": 1544,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.map_origin",
+          "line": 1583,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.map_size",
+          "line": 1607,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.localize",
+          "line": 1636,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "closure without a return type annotation (needs type inference)",
+              "detail": "| | point.relative_to(&self.origin)"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.is_empty",
+          "line": 1649,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.fmt",
+          "line": 1661,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.to_pixels",
+          "line": 1673,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == DevicePixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.to_device_pixels",
+          "line": 1683,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(self.width.0 * scale_factor).round() as i32"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(self.height.0 * scale_factor).round() as i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.scale",
+          "line": 1693,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.to_device_pixels",
+          "line": 1736,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(self.origin.x.0 * factor).round() as i32"
+            },
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "(self.origin.y.0 * factor).round() as i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.to_pixels",
+          "line": 1749,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == DevicePixels`"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Edges",
+          "line": 1761,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Refineable` has no Mojo equivalent",
+              "detail": "#[derive(Refineable)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.add",
+          "line": 1801,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.mul",
+          "line": 1817,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.mul_assign",
+          "line": 1832,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.all",
+          "line": 1843,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Edges.map",
+          "line": 1876,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Edges.any",
+          "line": 1910,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Edges.auto",
+          "line": 1946,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Length`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.zero",
+          "line": 1973,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "px(0.).into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.zero",
+          "line": 2003,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "px(0.).into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.to_pixels",
+          "line": 2031,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == DefiniteLength`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.zero",
+          "line": 2078,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "px(0.).into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.to_pixels",
+          "line": 2106,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == AbsoluteLength`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.scale",
+          "line": 2148,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.max",
+          "line": 2185,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.along",
+          "line": 2201,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.apply_along",
+          "line": 2208,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.from",
+          "line": 2227,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Edges.from",
+          "line": 2234,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "Anchor",
+          "line": 2244,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Anchor.opposite",
+          "line": 2266,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Anchor.other_side_along",
+          "line": 2288,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Anchor.is_center",
+          "line": 2323,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Anchor.is_bottom",
+          "line": 2332,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Corners",
+          "line": 2342,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Refineable` has no Mojo equivalent",
+              "detail": "#[derive(Refineable)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.all",
+          "line": 2363,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.corner",
+          "line": 2396,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Add` (no Mojo std trait)",
+              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Half"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.to_pixels",
+          "line": 2455,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == AbsoluteLength`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.scale",
+          "line": 2494,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.max",
+          "line": 2532,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.clamp_radii_for_quad_size",
+          "line": 2547,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Div` (no Mojo std trait)",
+              "detail": "`T: Div<f32, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: Comparable"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.map",
+          "line": 2569,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Corners.mul",
+          "line": 2621,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.mul_assign",
+          "line": 2636,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "dropped bound `Mul` (no Mojo std trait)",
+              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.from",
+          "line": 2647,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "val.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.from",
+          "line": 2658,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "impl specialised on a concrete type argument",
+              "detail": "method gated with `where Self.T == Pixels`"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Radians",
+          "line": 2668,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "radians",
+          "line": 2688,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Percentage",
+          "line": 2693,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "percentage",
+          "line": 2713,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Radians.from",
+          "line": 2723,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "Pixels",
+          "line": 2728,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.div",
+          "line": 2772,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.div_assign",
+          "line": 2778,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.rem_assign",
+          "line": 2784,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.rem",
+          "line": 2792,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.mul",
+          "line": 2800,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.__rmul__ (reflected Mul for f32)",
+          "line": 2808,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.mul",
+          "line": 2816,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.__rmul__ (reflected Mul for usize)",
+          "line": 2824,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.mul_assign",
+          "line": 2830,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.fmt",
+          "line": 2836,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.fmt",
+          "line": 2842,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.sum",
+          "line": 2848,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Sum` (no Mojo mapping yet)",
+              "detail": "Sum for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.sum",
+          "line": 2854,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Sum` (no Mojo mapping yet)",
+              "detail": "Sum for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.try_from",
+          "line": 2862,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "const",
+          "name": "Pixels.ZERO",
+          "line": 2872,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "Pixels.MAX",
+          "line": 2874,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "Pixels.MIN",
+          "line": 2876,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.as_f32",
+          "line": 2879,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.to_i32",
+          "line": 2884,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "self.0 as i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.floor",
+          "line": 2890,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.round",
+          "line": 2899,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.ceil",
+          "line": 2908,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.scale",
+          "line": 2917,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.pow",
+          "line": 2930,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.abs",
+          "line": 2943,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.signum",
+          "line": 2952,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.to_f64",
+          "line": 2963,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.partial_cmp",
+          "line": 2976,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
+              "detail": "PartialOrd for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.cmp",
+          "line": 2982,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Ord` (no Mojo mapping yet)",
+              "detail": "Ord for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.hash",
+          "line": 2988,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Hash` (no Mojo mapping yet)",
+              "detail": "Hash for Pixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.from",
+          "line": 2994,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.from",
+          "line": 3000,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "f32.from",
+          "line": 3006,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for f32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "f32.from",
+          "line": 3012,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for f32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "f64.from",
+          "line": 3018,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for f64"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "u32.from",
+          "line": 3024,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "u32.from",
+          "line": 3030,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.from",
+          "line": 3036,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "usize.from",
+          "line": 3042,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for usize"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.from",
+          "line": 3048,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "DevicePixels",
+          "line": 3053,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.to_bytes",
+          "line": 3081,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.fmt",
+          "line": 3109,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "i32.from",
+          "line": 3115,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.from",
+          "line": 3121,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.from",
+          "line": 3127,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "u32.from",
+          "line": 3133,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "u64.from",
+          "line": 3139,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u64"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.from",
+          "line": 3145,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "usize.from",
+          "line": 3151,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for usize"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.from",
+          "line": 3157,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "ScaledPixels",
+          "line": 3162,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.as_f32",
+          "line": 3174,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.floor",
+          "line": 3179,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.round",
+          "line": 3188,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.ceil",
+          "line": 3197,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.partial_cmp",
+          "line": 3210,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
+              "detail": "PartialOrd for ScaledPixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.cmp",
+          "line": 3216,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Ord` (no Mojo mapping yet)",
+              "detail": "Ord for ScaledPixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.fmt",
+          "line": 3222,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.from",
+          "line": 3228,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
+              "detail": "scaled.0.ceil() as i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.from",
+          "line": 3234,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "f64.from",
+          "line": 3240,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for f64"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "u32.from",
+          "line": 3246,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "From for u32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.from",
+          "line": 3252,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.div",
+          "line": 3260,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.div_assign",
+          "line": 3266,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.rem_assign",
+          "line": 3272,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.rem",
+          "line": 3280,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.mul",
+          "line": 3288,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.__rmul__ (reflected Mul for f32)",
+          "line": 3296,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.mul",
+          "line": 3304,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.__rmul__ (reflected Mul for usize)",
+          "line": 3312,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.mul_assign",
+          "line": 3318,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.sum",
+          "line": 3324,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Sum` (no Mojo mapping yet)",
+              "detail": "Sum for ScaledPixels"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.sum",
+          "line": 3330,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `Sum` (no Mojo mapping yet)",
+              "detail": "Sum for ScaledPixels"
+            }
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "Rems",
+          "line": 3335,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "Rems.ZERO",
+          "line": 3349,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.to_pixels",
+          "line": 3351,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.from_pixels",
+          "line": 3355,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method `.rem_size()` on a value of unknown type passed through",
+              "detail": "window.rem_size()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Rems.mul",
+          "line": 3364,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.add_assign",
+          "line": 3370,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.fmt",
+          "line": 3376,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.fmt",
+          "line": 3382,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.try_from",
+          "line": 3390,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for Rems"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "AbsoluteLength",
+          "line": 3399,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Neg` has no Mojo equivalent",
+              "detail": "#[derive(Neg)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.is_zero",
+          "line": 3414,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.from",
+          "line": 3424,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.from",
+          "line": 3430,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.to_pixels",
+          "line": 3436,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.to_rems",
+          "line": 3464,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.default",
+          "line": 3482,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.fmt",
+          "line": 3488,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.fmt",
+          "line": 3497,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "EXPECTED_ABSOLUTE_LENGTH",
+          "line": 3502,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.try_from",
+          "line": 3507,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for AbsoluteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.schema_name",
+          "line": 3521,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for AbsoluteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.json_schema",
+          "line": 3525,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for AbsoluteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.deserialize",
+          "line": 3534,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Deserialize`",
+              "detail": "Deserialize for AbsoluteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.serialize",
+          "line": 3554,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Serialize`",
+              "detail": "Serialize for AbsoluteLength"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "DefiniteLength",
+          "line": 3562,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Neg` has no Mojo equivalent",
+              "detail": "#[derive(Neg)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.to_pixels",
+          "line": 3576,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.fmt",
+          "line": 3616,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.fmt",
+          "line": 3622,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "EXPECTED_DEFINITE_LENGTH",
+          "line": 3630,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.try_from",
+          "line": 3635,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for DefiniteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.schema_name",
+          "line": 3652,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for DefiniteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.json_schema",
+          "line": 3656,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for DefiniteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.deserialize",
+          "line": 3665,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Deserialize`",
+              "detail": "Deserialize for DefiniteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.serialize",
+          "line": 3685,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Serialize`",
+              "detail": "Serialize for DefiniteLength"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.from",
+          "line": 3694,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "pixels.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.from",
+          "line": 3700,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "rems.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.from",
+          "line": 3706,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.default",
+          "line": 3712,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "enum",
+          "name": "Length",
+          "line": 3717,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.fmt",
+          "line": 3727,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.fmt",
+          "line": 3733,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "const",
+          "name": "EXPECTED_LENGTH",
+          "line": 3741,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.try_from",
+          "line": 3746,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of std trait `TryFrom` (no Mojo mapping yet)",
+              "detail": "TryFrom for Length"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.schema_name",
+          "line": 3760,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Length"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.json_schema",
+          "line": 3764,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `JsonSchema`",
+              "detail": "JsonSchema for Length"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.deserialize",
+          "line": 3773,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Deserialize`",
+              "detail": "Deserialize for Length"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.serialize",
+          "line": 3793,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Serialize`",
+              "detail": "Serialize for Length"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "relative",
+          "line": 3801,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "phi",
+          "line": 3817,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "std path with no Mojo mapping",
+              "detail": "std::f32::consts::GOLDEN_RATIO"
+            }
+          ]
+        },
+        {
+          "kind": "fn",
+          "name": "rems",
+          "line": 3822,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "px",
+          "line": 3835,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "fn",
+          "name": "auto",
+          "line": 3848,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.from",
+          "line": 3864,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "pixels.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.from",
+          "line": 3870,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "rems.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.from",
+          "line": 3876,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.from",
+          "line": 3882,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`.into()` without a known target type",
+              "detail": "length.into()"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Length.default",
+          "line": 3888,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.from",
+          "line": 3894,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "struct",
+          "name": "GridLocation",
+          "line": 3899,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "GridPlacement",
+          "line": 3908,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "derive `Serialize` has no Mojo equivalent",
+              "detail": "#[derive(Serialize)] dropped"
+            },
+            {
+              "key": "derive `Deserialize` has no Mojo equivalent",
+              "detail": "#[derive(Deserialize)] dropped"
+            },
+            {
+              "key": "derive `JsonSchema` has no Mojo equivalent",
+              "detail": "#[derive(JsonSchema)] dropped"
+            },
+            {
+              "key": "Debug on data enum maps to Variant's Writable (format differs from Rust)",
+              "detail": "GridPlacement"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "GridPlacement.from",
+          "line": 3921,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "trait",
+          "name": "Half",
+          "line": 3930,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "i32.half",
+          "line": 3945,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "Half for i32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "f32.half",
+          "line": 3951,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl on a std/primitive type (Mojo has no extensions)",
+              "detail": "Half for f32"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.half",
+          "line": 3957,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.half",
+          "line": 3963,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.half",
+          "line": 3969,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.half",
+          "line": 3975,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "trait",
+          "name": "IsZero",
+          "line": 3980,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "DevicePixels.is_zero",
+          "line": 3996,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "ScaledPixels.is_zero",
+          "line": 4002,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Pixels.is_zero",
+          "line": 4008,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Rems.is_zero",
+          "line": 4014,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "AbsoluteLength.is_zero",
+          "line": 4020,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "method signature collides with another impl's method (Mojo needs one definition)",
+              "detail": "AbsoluteLength.is_zero"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "DefiniteLength.is_zero",
+          "line": 4029,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Length.is_zero",
+          "line": 4038,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "method",
+          "name": "Point.is_zero",
+          "line": 4047,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: IsZero"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Size.is_zero",
+          "line": 4056,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: IsZero"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Bounds.is_zero",
+          "line": 4062,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: IsZero"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Corners.is_zero",
+          "line": 4071,
+          "status": "partial",
+          "reasons": [
+            {
+              "key": "method gated on an extra trait bound (`where conforms_to`)",
+              "detail": "Self.T: IsZero"
+            }
+          ]
+        },
+        {
+          "kind": "mod",
+          "name": "tests",
+          "line": 4079,
+          "status": "skipped",
+          "reasons": []
+        }
+      ]
+    }
+  ]
+}

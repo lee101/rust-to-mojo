@@ -1,0 +1,37 @@
+gpui: 103 files, 4637 items: 1278 translated, 595 partial, 2681 stubbed, 83 skipped -> emitted 41.1%, clean 28.1%
+
+top stub reasons:
+   1.  1040  method of an untranslated type (cause: `dyn Trait` (no existential types in Mojo))
+   2.   170  method of an untranslated type (cause: lock type (no Mojo std equivalent))
+   3.   149  method of an untranslated type (cause: reference type in field/value position (needs Pointer + origin))
+   4.   131  closure with untyped parameters (needs type inference)
+   5.   121  `dyn Trait` (no existential types in Mojo)
+   6.    99  reference type in field/value position (needs Pointer + origin)
+   7.    59  closure taking a `&mut` argument
+   8.    53  `.into()` without a known target type
+   9.    53  impl for a type defined in another module or not translated (Mojo needs methods inside the struct)
+  10.    33  `impl Trait` return type
+  11.    30  method of an untranslated type (cause: std type with no Mojo mapping)
+  12.    28  bound on a generic trait
+  13.    28  let-else
+  14.    28  method of an untranslated type (cause: unsized slice type `[T]`)
+  15.    27  impl for an external type (Mojo has no extensions)
+
+top TODO notes on partial items:
+   1.    67  RefCell lowered to mojo_rt.cell.RefCell (no dynamic borrow checking)
+   2.    53  shared/immutable string lowered to String
+   3.    49  method gated on an extra trait bound (`where conforms_to`)
+   4.    46  derive `Serialize` has no Mojo equivalent
+   5.    45  derive `Deserialize` has no Mojo equivalent
+   6.    38  Debug on data enum maps to Variant's Writable (format differs from Rust)
+   7.    36  dropped bound `Add` (no Mojo std trait)
+   8.    35  Rc lowered to ArcPointer (atomic refcount)
+   9.    33  SmallVec lowered to List (no inline storage)
+  10.    32  cfg-gated item translated unconditionally
+  11.    32  derive `JsonSchema` has no Mojo equivalent
+  12.    31  Result<T, E> lowered to `raises` (error type erased)
+  13.    28  associated function on external type `Duration`
+  14.    25  method `.random_range()` on a value of unknown type passed through
+  15.    24  impl specialised on a concrete type argument
+
+wrote out/crate (coverage.md, coverage.json, hints.json)
