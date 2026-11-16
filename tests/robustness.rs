@@ -51,6 +51,10 @@ fn crate_mode_layout() {
     assert!(geometry.contains("struct Point"), "{}", geometry);
     let hsla = &out.files.iter().find(|(p, _)| p.ends_with("hsla.mojo")).unwrap().1;
     assert!(hsla.contains("from minicrate.geometry import Point"), "{}", hsla);
+    // `impl Point` written in color/hsla.rs is merged into the struct in geometry.mojo
+    assert!(geometry.contains("def to_hsla(self) -> Hsla:"), "{}", geometry);
+    assert!(geometry.contains("from minicrate.color.hsla import Hsla, at"), "{}", geometry);
+    assert!(hsla.contains("is translated in `minicrate.geometry`"), "{}", hsla);
     let root = &out.files.iter().find(|(p, _)| p.to_string_lossy().replace('\\', "/") == "minicrate/__init__.mojo").unwrap().1;
     assert!(root.contains("from . import color"), "{}", root);
     assert_eq!(out.report.internal_errors, 0);

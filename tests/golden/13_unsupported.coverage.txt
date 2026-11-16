@@ -9,14 +9,14 @@ extern extern block [line 13]: stubbed
 fn dynamic [line 17]: stubbed
     - `dyn Trait` (no existential types in Mojo)
 trait Describe [line 21]: translated
-method i32.describe [line 26]: stubbed
-    - impl on a std/primitive type (Mojo has no extensions)
+method i32.describe (extension fn Describe_i32_describe) [line 26]: partial
+    - extension impl lowered to a free function (Mojo has no extensions)
 method Vec.describe [line 32]: stubbed
     - impl on a std/primitive type (Mojo has no extensions)
-struct Holder [line 37]: stubbed
-    - reference type in field/value position (needs Pointer + origin)
+struct Holder [line 37]: partial
+    - field type erased to `Erased` (code using the field is stubbed)
 union IntOrFloat [line 41]: stubbed
     - union
 fn label_loop [line 46]: stubbed
     - labeled for loop
-total 11 translated 1 partial 0 stubbed 10 skipped 0
+total 11 translated 1 partial 2 stubbed 8 skipped 0

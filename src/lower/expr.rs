@@ -3,6 +3,7 @@
 use super::names;
 use super::types::*;
 use super::*;
+use crate::symbols::FieldKind;
 use syn::{BinOp as RB, Expr, Lit, Stmt, UnOp as RU};
 
 /// Where the value of a tail expression goes.
@@ -123,9 +124,16 @@ enum RecvKind {
     Boxed,
     RefCell,
     Cell,
+    Lock,
     Tuple,
     Unknown,
 }
+
+/// `Option` methods taking a closure, mapped to `mojo_rt.option` helpers.
+const OPTION_COMBINATORS: &[&str] = &["map", "and_then", "unwrap_or_else", "is_some_and", "is_none_or", "map_or", "filter", "or_else", "inspect"];
+
+/// Lock methods that hand out a guard (lowered to a plain reference).
+const LOCK_GUARD_METHODS: &[&str] = &["lock", "read", "write", "try_lock", "try_read", "try_write", "get_mut", "lock_arc", "read_arc", "write_arc", "upgradable_read"];
 
 impl<'a> FileCtx<'a> {
     // ======================================================================
@@ -329,6 +337,15 @@ impl<'a> FileCtx<'a> {
                         return Ok(());
                     }
                 }
+                if ann.is_none() && self.is_guard_call(init) {
+                    // lock guard / RefCell borrow: bind by reference so writes
+                    // through it reach the shared value
+                    let v = self.lower_expr(init)?;
+                    out.extend(self.take_pending());
+                    let name = self.declare(&rust_name, rty, true, false);
+                    out.push(MStmt::Var { kind: BindKind::Ref, name, ty: None, init: Some(v) });
+                    return Ok(());
+                }
                 let v = self.lower_expr_exp(init, ann_mty.as_ref())?;
                 let v = self.maybe_transfer(init, v);
                 out.extend(self.take_pending());
@@ -444,6 +461,14 @@ impl<'a> FileCtx<'a> {
                 Ok(())
             }
             Expr::Assign(a) => {
+                if let Expr::Field(f) = &*a.left {
+                    if let syn::Member::Named(n) = &f.member {
+                        let bt = self.type_of(&f.base);
+                        if self.field_kind_of(bt.as_ref(), &n.to_string()) == Some(FieldKind::Pointer) {
+                            return unsup("reassigning a borrowed-reference field (rebinding a Pointer)", tokens_str(e));
+                        }
+                    }
+                }
                 let lhs = self.lower_place(&a.left)?;
                 let rhs = self.lower_expr(&a.right)?;
                 let rhs = self.maybe_transfer(&a.right, rhs);
@@ -467,6 +492,10 @@ impl<'a> FileCtx<'a> {
                 };
                 let rhs = self.lower_expr(&b.right)?;
                 out.extend(self.take_pending());
+                if let Some(v) = self.generic_arith(op, &b.left, &b.right, lhs.clone(), rhs.clone()) {
+                    out.push(MStmt::Assign(lhs, v));
+                    return Ok(());
+                }
                 out.push(MStmt::AugAssign(lhs, op, rhs));
                 Ok(())
             }
@@ -1047,6 +1076,11 @@ impl<'a> FileCtx<'a> {
             Expr::Reference(r) => self.lower_expr_exp(&r.expr, exp),
             Expr::Unary(u) => match u.op {
                 RU::Neg(_) => {
+                    if self.type_of(&u.expr).map(|t| self.is_param_rty(&t)).unwrap_or(false) {
+                        let v = self.lower_expr(&u.expr)?;
+                        let f = self.rt_ops("neg");
+                        return Ok(MExpr::call(f, vec![v]));
+                    }
                     let v = self.lower_expr_exp(&u.expr, exp)?;
                     Ok(match v {
                         MExpr::Int(s) if !s.starts_with('-') => MExpr::Int(format!("-{}", s)),
@@ -1075,6 +1109,16 @@ impl<'a> FileCtx<'a> {
             Expr::MethodCall(mc) => self.lower_method_call(mc, exp),
             Expr::Field(f) => {
                 let base_t = self.type_of(&f.base);
+                if let syn::Member::Named(n) = &f.member {
+                    match self.field_kind_of(base_t.as_ref(), &n.to_string()) {
+                        Some(FieldKind::Erased(cause)) => return unsup(format!("uses a field erased to `Erased` (cause: {})", cause), tokens_str(e)),
+                        Some(FieldKind::Pointer) => {
+                            let base = self.lower_expr(&f.base)?;
+                            return Ok(MExpr::Index(Box::new(MExpr::attr(base, &names::ident(&n.to_string()))), vec![]));
+                        }
+                        _ => {}
+                    }
+                }
                 let base = self.lower_expr(&f.base)?;
                 match &f.member {
                     syn::Member::Named(n) => Ok(MExpr::attr(base, &names::ident(&n.to_string()))),
@@ -1358,6 +1402,10 @@ impl<'a> FileCtx<'a> {
     }
 
     fn lower_closure(&mut self, c: &syn::ExprClosure) -> LResult<MExpr> {
+        let hint = self.f.closure_hint.take();
+        if c.asyncness.is_some() {
+            return unsup("async closure", tokens_str(c));
+        }
         let mut args = vec![];
         for (i, p) in c.inputs.iter().enumerate() {
             match p {
@@ -1368,19 +1416,27 @@ impl<'a> FileCtx<'a> {
                     let (conv, ty) = self.lower_arg_type(&pt.ty, pi.mutability.is_some())?;
                     args.push((pi.ident.to_string(), conv, ty, (*pt.ty).clone()));
                 }
-                _ => {
-                    let _ = i;
-                    return unsup("closure with untyped parameters (needs type inference)", tokens_str(c));
+                syn::Pat::Ident(_) | syn::Pat::Wild(_) | syn::Pat::Reference(_) => {
+                    // parameter type from the call site (infer.rs)
+                    let Some(t) = hint.as_ref().and_then(|h| h.inputs.get(i).cloned().flatten()) else {
+                        return unsup("closure with untyped parameters (needs type inference)", tokens_str(c));
+                    };
+                    let (name, mutable, t) = match p {
+                        syn::Pat::Ident(pi) if pi.subpat.is_none() => (pi.ident.to_string(), pi.mutability.is_some(), t),
+                        syn::Pat::Wild(_) => (format!("_unused{}", i), false, t),
+                        // `|&x|` against `&T`: bind the pointee
+                        syn::Pat::Reference(r) => match (&*r.pat, &t) {
+                            (syn::Pat::Ident(pi), syn::Type::Reference(tr)) if pi.subpat.is_none() => (pi.ident.to_string(), false, (*tr.elem).clone()),
+                            _ => return unsup("closure with destructuring parameters", tokens_str(c)),
+                        },
+                        _ => return unsup("closure with destructuring parameters", tokens_str(c)),
+                    };
+                    let (conv, ty) = self.lower_arg_type(&t, mutable)?;
+                    args.push((name, conv, ty, t));
                 }
+                _ => return unsup("closure with destructuring parameters", tokens_str(c)),
             }
         }
-        let syn::ReturnType::Type(_, rt) = &c.output else {
-            return unsup("closure without a return type annotation (needs type inference)", tokens_str(c));
-        };
-        if c.asyncness.is_some() {
-            return unsup("async closure", tokens_str(c));
-        }
-        let ret = self.lower_type(rt)?;
         // captures: free identifiers that resolve to locals of the enclosing fn
         let mut captured: Vec<String> = vec![];
         {
@@ -1419,15 +1475,50 @@ impl<'a> FileCtx<'a> {
         self.push_scope();
         let mut margs = vec![];
         for (n, conv, ty, rty) in &args {
-            let mn = self.declare(n, Some(strip_ref(rty).clone()), matches!(rty, syn::Type::Reference(_)), false);
+            let mn = if n.starts_with("_unused") { n.clone() } else { self.declare(n, Some(strip_ref(rty).clone()), matches!(rty, syn::Type::Reference(_)), false) };
             margs.push(MArg { conv: *conv, name: mn, ty: Some(ty.clone()), kw_only: false });
         }
-        self.f.ret_mty = Some(ret.clone());
+        // Return type: annotation, then call-site signature, then the type of
+        // a single-expression body.
+        let ret_r: LResult<Option<MType>> = (|| {
+            if let syn::ReturnType::Type(_, rt) = &c.output {
+                return Ok(Some(self.lower_type(rt)?));
+            }
+            match hint.as_ref().and_then(|h| h.output.clone()) {
+                Some(Some(t)) => return Ok(Some(self.lower_type(&t)?)),
+                Some(None) => return Ok(None),
+                None => {}
+            }
+            if closure_body_is_unit(&c.body) {
+                return Ok(None);
+            }
+            let body_t = match &*c.body {
+                Expr::Block(b) => match b.block.stmts.last() {
+                    Some(Stmt::Expr(tail, None)) => self.type_of(tail),
+                    _ => None,
+                },
+                b => self.type_of(b),
+            };
+            let body_t = body_t.filter(|t| !matches!(t, syn::Type::Infer(_)) && !tokens_str(t).contains('_'));
+            match body_t {
+                Some(t) if !is_unit_rty(&t) => Ok(Some(self.lower_type(&t)?)),
+                _ => unsup("closure without a return type annotation (needs type inference)", tokens_str(c)),
+            }
+        })();
+        let ret = match ret_r {
+            Ok(r) => r,
+            Err(u) => {
+                self.f.scopes = outer;
+                return Err(u);
+            }
+        };
+        self.f.ret_mty = ret.clone();
         self.f.raises = false;
-        self.f.returns_option = ret.is_named("Optional");
+        self.f.returns_option = ret.as_ref().map(|r| r.is_named("Optional")).unwrap_or(false);
         let saved_pending = self.take_pending();
         let mut body = vec![];
-        let r = self.lower_expr_sink(&c.body, &Sink::Return, &mut body);
+        let sink = if ret.is_some() { Sink::Return } else { Sink::Discard };
+        let r = self.lower_expr_sink(&c.body, &sink, &mut body);
         self.f.pending = saved_pending;
         self.f.scopes = outer;
         self.f.ret_mty = saved_ret.0;
@@ -1435,10 +1526,16 @@ impl<'a> FileCtx<'a> {
         self.f.returns_option = saved_ret.2;
         self.f.ret_rty = saved_ret.3;
         r?;
+        if body.is_empty() {
+            body.push(MStmt::Pass);
+        }
         let f = MFunction {
             name: name.clone(),
             args: margs,
-            ret: RetType::Value(ret),
+            ret: match ret {
+                Some(t) => RetType::Value(t),
+                None => RetType::None,
+            },
             body: Some(body),
             captures: caps,
             ..Default::default()
@@ -1593,6 +1690,27 @@ impl<'a> FileCtx<'a> {
         Ok(out)
     }
 
+    /// Arguments of an enum variant constructor; `.into()` arguments get the
+    /// payload field type as their target.
+    fn lower_variant_args(&mut self, enum_name: &str, variant: &str, args: &syn::punctuated::Punctuated<Expr, syn::Token![,]>) -> LResult<Vec<MExpr>> {
+        let tys = self.syms.enums.get(enum_name).filter(|i| i.generics.is_empty()).and_then(|i| i.variant_types.get(variant).cloned()).unwrap_or_default();
+        let mut v = vec![];
+        for (i, a) in args.iter().enumerate() {
+            let exp = match tys.get(i) {
+                Some(t) if super::infer::wants_expected_type(a) => {
+                    let saved = self.todos.len();
+                    let r = self.lower_type(t).ok();
+                    self.todos.truncate(saved);
+                    r
+                }
+                _ => None,
+            };
+            let x = self.lower_expr_exp(a, exp.as_ref())?;
+            v.push(self.maybe_transfer(a, x));
+        }
+        Ok(v)
+    }
+
     pub fn enum_variant_value(&mut self, enum_name: &str, variant: &str) -> LResult<MExpr> {
         let info = self.syms.enums.get(enum_name).cloned();
         let owner = if self.ts.self_name.as_deref() == Some(enum_name) { "Self".to_string() } else { enum_name.to_string() };
@@ -1689,6 +1807,9 @@ impl<'a> FileCtx<'a> {
             RB::Rem(_) => {
                 let l = self.lower_expr(&b.left)?;
                 let r = self.lower_expr(&b.right)?;
+                if let Some(v) = self.generic_arith(BinOp::Mod, &b.left, &b.right, l.clone(), r.clone()) {
+                    return Ok(v);
+                }
                 return Ok(self.lower_rem(&b.left, &b.right, l, r));
             }
             RB::And(_) => BinOp::And,
@@ -1718,7 +1839,65 @@ impl<'a> FileCtx<'a> {
         } else {
             self.lower_expr(&b.right)?
         };
+        if let Some(v) = self.generic_arith(op, &b.left, &b.right, l.clone(), r.clone()) {
+            return Ok(v);
+        }
         Ok(MExpr::bin(l, op, r))
+    }
+
+    /// How field `field` of a value of Rust type `base_t` was lowered, if not
+    /// directly. With an unknown receiver type, any struct's erased/pointer
+    /// field of that name counts (conservative: such code is stubbed).
+    pub fn field_kind_of(&self, base_t: Option<&syn::Type>, field: &str) -> Option<FieldKind> {
+        let sname = base_t.and_then(rty_last).map(|n| if n == "Self" { self.ts.self_name.clone().unwrap_or(n) } else { n });
+        match sname {
+            Some(n) if self.syms.structs.contains_key(&n) => self.syms.field_kind(&n, field).cloned(),
+            Some(n) if n != "Self" && (self.syms.enums.contains_key(&n) || is_prim_rty(base_t.unwrap())) => None,
+            _ => {
+                if matches!(base_t.map(strip_ref), Some(syn::Type::Tuple(_))) {
+                    return None;
+                }
+                if let Some(c) = self.syms.erased_names.get(field) {
+                    return Some(FieldKind::Erased(format!("{}; receiver type unknown", c)));
+                }
+                if self.syms.pointer_names.contains(field) {
+                    return Some(FieldKind::Erased("borrowed-reference field; receiver type unknown".into()));
+                }
+                None
+            }
+        }
+    }
+
+    /// `a + b` where an operand's type is a generic parameter `T`: Mojo has no
+    /// arithmetic trait that the built-in scalars conform to, so dispatch
+    /// through `mojo_rt.ops` (see the module docstring and MAPPING.md 6.1).
+    pub fn generic_arith(&mut self, op: BinOp, le: &Expr, re: &Expr, l: MExpr, r: MExpr) -> Option<MExpr> {
+        let f = ops_fn(op)?;
+        let lt = self.type_of(le);
+        let rt = self.type_of(re);
+        let lp = lt.as_ref().map(|t| self.is_param_rty(t)).unwrap_or(false);
+        let rp = rt.as_ref().map(|t| self.is_param_rty(t)).unwrap_or(false);
+        if !lp && !rp {
+            return None;
+        }
+        let same = match (&lt, &rt) {
+            (Some(a), Some(b)) => rty_last(a) == rty_last(b),
+            _ => true,
+        };
+        let rhs_scalar_ok = rt.as_ref().map(|t| self.is_param_rty(t) || rty_last(t).as_deref() == Some("f32")).unwrap_or(false);
+        if !same && lp && rhs_scalar_ok && matches!(op, BinOp::Mul | BinOp::Div) {
+            let func = self.rt_ops(if op == BinOp::Mul { "mul_rhs" } else { "div_rhs" });
+            return Some(MExpr::call(func, vec![l, r]));
+        }
+        if !same {
+            self.todo(
+                "operator on a generic parameter with a different operand type",
+                format!("`{} {} {}`: mojo_rt.ops only covers `Output = Self` operators", tokens_str(le), op.text(), tokens_str(re)),
+            );
+            return None;
+        }
+        let func = self.rt_ops(f);
+        Some(MExpr::call(func, vec![l, r]))
     }
 
     fn lower_rem(&mut self, le: &Expr, re: &Expr, l: MExpr, r: MExpr) -> MExpr {
@@ -1812,10 +1991,11 @@ impl<'a> FileCtx<'a> {
             }
             if let Some(en) = self.variant_imports.get(last).cloned() {
                 let f = self.enum_variant_value(&en, last)?;
-                let args = self.lower_args(&c.args)?;
+                let args = self.lower_variant_args(&en, last, &c.args)?;
                 return Ok(MExpr::call(f, args));
             }
-            let args = self.lower_args(&c.args)?;
+            let sig = self.find_sig(last, None, c.args.len(), false);
+            let args = self.lower_args_with_sig(&c.args, sig.as_ref(), false, None)?;
             let ta = self.lower_seg_args(&p.path.segments[0])?;
             let base = MExpr::name(names::ident(last));
             let f = if ta.is_empty() { base } else { MExpr::Param(Box::new(base), ta) };
@@ -1919,7 +2099,7 @@ impl<'a> FileCtx<'a> {
         if let Some(info) = self.syms.enums.get(&owner) {
             if info.variant(last).is_some() {
                 let f = self.enum_variant_value(&owner, last)?;
-                let args = self.lower_args(&c.args)?;
+                let args = self.lower_variant_args(&owner, last, &c.args)?;
                 return Ok(MExpr::call(f, args));
             }
         }
@@ -1942,7 +2122,9 @@ impl<'a> FileCtx<'a> {
                 let a = self.lower_seg_args(&p.path.segments[n - 2])?;
                 if a.is_empty() { MExpr::name(prev) } else { MExpr::Param(Box::new(MExpr::name(prev)), a) }
             };
-            let args = self.lower_args(&c.args)?;
+            let sig = self.find_sig(last, Some(&owner), c.args.len(), false);
+            let recv_t = if self.ts.self_name.as_deref() == Some(owner.as_str()) { self.ts.self_rty.clone() } else { None };
+            let args = self.lower_args_with_sig(&c.args, sig.as_ref(), false, recv_t.as_ref())?;
             return Ok(MExpr::call(MExpr::attr(base, &names::ident(last)), args));
         }
         if ["std", "core", "alloc"].contains(&segs[0].as_str()) {
@@ -1950,7 +2132,8 @@ impl<'a> FileCtx<'a> {
         }
         if let Some(module) = self.resolve_module_path(&segs[..n - 1]) {
             self.import(&module, last);
-            let args = self.lower_args(&c.args)?;
+            let sig = self.find_sig(last, None, c.args.len(), false);
+            let args = self.lower_args_with_sig(&c.args, sig.as_ref(), false, None)?;
             return Ok(MExpr::call(MExpr::name(names::ident(last)), args));
         }
         if prev.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
@@ -2021,12 +2204,27 @@ impl<'a> FileCtx<'a> {
                     Some(ft)
                 }
             });
+            let fkind = info.as_ref().and_then(|si| self.syms.field_kind(&si.name, &fname).cloned());
+            if let Some(FieldKind::Erased(cause)) = &fkind {
+                return unsup(format!("constructs a value with a field erased to `Erased` (cause: {})", cause), tokens_str(s));
+            }
             let exp_m = match exp_ty {
-                Some(t) => self.lower_type(&t).ok(),
-                None => None,
+                Some(t) if fkind.is_none() => self.lower_type(&t).ok(),
+                _ => None,
             };
             let v = self.lower_expr_exp(&fv.expr, exp_m.as_ref())?;
             let v = self.maybe_transfer(&fv.expr, v);
+            let v = if fkind == Some(FieldKind::Pointer) {
+                // `&'a x` stored in a `Pointer[T, origin]` field
+                self.import("std.memory", "Pointer");
+                self.todo(
+                    "borrowed-reference field initialised with `Pointer(to=...)` (the struct's origin parameter must be inferable at the call site)",
+                    format!("{}.{}", info.as_ref().map(|i| i.name.clone()).unwrap_or_default(), fname),
+                );
+                MExpr::Call(Box::new(MExpr::name("Pointer")), vec![MArgVal::kw("to", v)])
+            } else {
+                v
+            };
             if positional {
                 args.push(MArgVal::pos(v));
             } else {
@@ -2049,6 +2247,11 @@ impl<'a> FileCtx<'a> {
                 MExpr::name(t)
             };
             for f in field_names {
+                if let Some(FieldKind::Erased(cause)) = info.as_ref().and_then(|si| self.syms.field_kind(&si.name, &f).cloned()) {
+                    if !seen.contains(&f) {
+                        return unsup(format!("constructs a value with a field erased to `Erased` (cause: {})", cause), tokens_str(s));
+                    }
+                }
                 if !seen.contains(&f) {
                     let fe = MExpr::attr(base.clone(), &names::ident(&f));
                     args.push(MArgVal::kw(names::ident(&f), fe));
@@ -2086,6 +2289,7 @@ impl<'a> FileCtx<'a> {
             "Box" => RecvKind::Boxed,
             "RefCell" => RecvKind::RefCell,
             "Cell" => RecvKind::Cell,
+            "Mutex" | "RwLock" | "ReentrantMutex" => RecvKind::Lock,
             x if names::is_int(x) => RecvKind::Int,
             x if self.ts.params.contains_key(x) => RecvKind::Param,
             x if self.syms.structs.contains_key(x) || self.syms.enums.contains_key(x) => RecvKind::User(x.to_string()),
@@ -2118,6 +2322,10 @@ impl<'a> FileCtx<'a> {
             None => vec![],
         };
 
+        // `m.lock().unwrap()` (std::sync): the shim's lock cannot fail
+        if (name == "unwrap" || name == "expect") && self.is_guard_call(&mc.receiver) {
+            return self.lower_expr(&mc.receiver);
+        }
         // Formatter writes inside a Display/Debug impl
         // Universal trait methods first.
         match name.as_str() {
@@ -2166,7 +2374,14 @@ impl<'a> FileCtx<'a> {
         let user_defined = self.syms.user_methods.contains(&name);
         let passthrough = |this: &mut Self| -> LResult<MExpr> {
             let r = this.lower_expr(&mc.receiver)?;
-            let args = this.lower_args(&mc.args)?;
+            let recv_t = this.type_of(&mc.receiver).map(|t| match rty_last(&t).as_deref() {
+                Some("Rc") | Some("Arc") | Some("Box") => rty_args(&t).into_iter().next().unwrap_or(t),
+                _ => t,
+            });
+            let owner = recv_t.as_ref().and_then(rty_last).map(|o| if o == "Self" { this.ts.self_name.clone().unwrap_or(o) } else { o });
+            let owner = owner.filter(|o| !this.ts.params.contains_key(o));
+            let sig = this.find_sig(&name, owner.as_deref(), mc.args.len(), true);
+            let args = this.lower_args_with_sig(&mc.args, sig.as_ref(), true, recv_t.as_ref())?;
             let r = match this.recv_kind(&mc.receiver) {
                 RecvKind::Rc | RecvKind::Boxed => MExpr::Index(Box::new(r), vec![]),
                 _ => r,
@@ -2185,10 +2400,14 @@ impl<'a> FileCtx<'a> {
                     if ik == RecvKind::RefCell {
                         return self.refcell_method(&name, mc, true);
                     }
+                    if ik == RecvKind::Lock {
+                        return self.lock_method(&name, mc, true);
+                    }
                 }
                 return passthrough(self);
             }
             RecvKind::RefCell => return self.refcell_method(&name, mc, false),
+            RecvKind::Lock => return self.lock_method(&name, mc, false),
             RecvKind::Cell => {
                 let r = self.lower_expr(&mc.receiver)?;
                 let args = self.lower_args(&mc.args)?;
@@ -2206,6 +2425,23 @@ impl<'a> FileCtx<'a> {
         let recv_is_unknown = kind == RecvKind::Unknown;
         if recv_is_unknown && user_defined {
             return passthrough(self);
+        }
+        // Option combinators taking a closure: mojo_rt.option helpers
+        if kind == RecvKind::Opt && OPTION_COMBINATORS.contains(&name.as_str()) && mc.args.iter().any(|a| matches!(a, Expr::Closure(_))) {
+            let r = self.lower_expr(&mc.receiver)?;
+            let mut args = vec![r];
+            for a in &mc.args {
+                if matches!(a, Expr::Closure(_)) {
+                    self.f.closure_hint = self.option_closure_hint(recv_t.as_ref(), &name);
+                }
+                let x = self.lower_expr(a);
+                self.f.closure_hint = None;
+                let x = x?;
+                args.push(self.maybe_transfer(a, x));
+            }
+            // module alias: `map`/`filter` would shadow user functions
+            self.imports.insert(MImport { module: "mojo_rt".into(), name: Some("option".into()), alias: Some("rt_option".into()) });
+            return Ok(MExpr::call(MExpr::attr(MExpr::name("rt_option"), &name), args));
         }
 
         let r = self.lower_expr(&mc.receiver)?;
@@ -2244,6 +2480,46 @@ impl<'a> FileCtx<'a> {
         let m = MExpr::attr(r, &names::ident(&name));
         let m = if turbofish.is_empty() { m } else { MExpr::Param(Box::new(m), turbofish) };
         Ok(MExpr::call(m, args))
+    }
+
+    fn lock_method(&mut self, name: &str, mc: &syn::ExprMethodCall, via_rc: bool) -> LResult<MExpr> {
+        let mut r = self.lower_expr(&mc.receiver)?;
+        if via_rc {
+            r = MExpr::Index(Box::new(r), vec![]);
+        }
+        let args = self.lower_args(&mc.args)?;
+        self.todo("lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references)", tokens_str(mc));
+        let mapped = match name {
+            "lock" | "lock_arc" | "try_lock" => "lock",
+            "read" | "read_arc" | "try_read" | "upgradable_read" => "read",
+            "write" | "write_arc" | "try_write" => "write",
+            "get_mut" => "get_mut",
+            "into_inner" => "into_inner",
+            _ => return unsup(format!("lock method `.{}()`", name), tokens_str(mc)),
+        };
+        if name.starts_with("try_") {
+            return unsup(format!("lock method `.{}()` (returns Option/Result of a guard)", name), tokens_str(mc));
+        }
+        Ok(MExpr::method(r, mapped, args))
+    }
+
+    /// Is `e` a call that yields a lock guard or RefCell borrow (bound by
+    /// reference, not copied)? `std::sync` locks add `.unwrap()`.
+    pub fn is_guard_call(&self, e: &Expr) -> bool {
+        let Expr::MethodCall(mc) = e else { return false };
+        let name = mc.method.to_string();
+        if (name == "unwrap" || name == "expect") && matches!(&*mc.receiver, Expr::MethodCall(_)) {
+            return self.is_guard_call(&mc.receiver);
+        }
+        let kind = match self.recv_kind(&mc.receiver) {
+            RecvKind::Rc | RecvKind::Boxed => self.type_of(&mc.receiver).and_then(|t| rty_args(&t).into_iter().next()).map(|t| self.kind_of_rty(&t)).unwrap_or(RecvKind::Unknown),
+            k => k,
+        };
+        match kind {
+            RecvKind::Lock => LOCK_GUARD_METHODS.contains(&name.as_str()),
+            RecvKind::RefCell => name == "borrow" || name == "borrow_mut",
+            _ => false,
+        }
     }
 
     fn refcell_method(&mut self, name: &str, mc: &syn::ExprMethodCall, via_rc: bool) -> LResult<MExpr> {
@@ -2492,6 +2768,18 @@ impl<'a> FileCtx<'a> {
                     "len" => parse_rty("usize"),
                     "is_empty" | "is_some" | "is_none" | "contains" | "contains_key" | "starts_with" | "ends_with" | "is_nan" => parse_rty("bool"),
                     "to_string" => parse_rty("String"),
+                    "lock" | "read" | "write" | "borrow" | "borrow_mut" | "get_mut" if mc.args.is_empty() => {
+                        let t = self.type_of(&mc.receiver)?;
+                        let t = match rty_last(&t).as_deref() {
+                            Some("Rc") | Some("Arc") | Some("Box") => rty_args(&t).into_iter().next()?,
+                            _ => t,
+                        };
+                        match rty_last(&t).as_deref() {
+                            Some("Mutex") | Some("RwLock") | Some("RefCell") | Some("ReentrantMutex") => rty_args(&t).into_iter().next(),
+                            _ => None,
+                        }
+                    }
+                    "unwrap" | "expect" if self.is_guard_call(&mc.receiver) => self.type_of(&mc.receiver),
                     "unwrap" | "expect" | "unwrap_or" | "unwrap_or_default" => {
                         let t = self.type_of(&mc.receiver)?;
                         if rty_last(&t).as_deref() == Some("Option") {
@@ -2570,6 +2858,37 @@ impl<'a> FileCtx<'a> {
             }
             _ => None,
         }
+    }
+}
+
+/// A closure body whose type is `()` by syntax alone: a block without a tail
+/// expression and without `return <value>`, or an assignment.
+fn closure_body_is_unit(e: &Expr) -> bool {
+    match e {
+        Expr::Assign(_) => true,
+        Expr::Binary(b) => compound_op(&b.op).is_some(),
+        Expr::Block(b) => {
+            if b.label.is_some() || matches!(b.block.stmts.last(), Some(Stmt::Expr(_, None))) {
+                return false;
+            }
+            use syn::visit::Visit;
+            struct V(bool);
+            impl<'ast> Visit<'ast> for V {
+                fn visit_expr_return(&mut self, r: &'ast syn::ExprReturn) {
+                    if r.expr.is_some() {
+                        self.0 = false;
+                    }
+                }
+                fn visit_expr_closure(&mut self, _: &'ast syn::ExprClosure) {}
+                fn visit_item(&mut self, _: &'ast syn::Item) {}
+            }
+            let mut v = V(true);
+            v.visit_block(&b.block);
+            // a trailing diverging macro (`panic!`, `unreachable!`) has type `!`
+            let diverges = matches!(b.block.stmts.last(), Some(Stmt::Macro(m)) if ["panic", "unreachable", "todo", "unimplemented"].contains(&path_last(&m.mac.path).as_str()));
+            v.0 && !diverges
+        }
+        _ => false,
     }
 }
 

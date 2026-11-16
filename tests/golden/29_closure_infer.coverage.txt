@@ -1,0 +1,18 @@
+struct Window [line 3]: translated
+struct App [line 7]: translated
+fn apply [line 12]: translated
+fn with_window [line 16]: translated
+fn count_if [line 20]: partial
+    - slice argument `&[T]` lowered to List[T] borrow
+method App.update_scale [line 34]: translated
+method App.demo [line 38]: translated
+fn grow [line 46]: translated
+fn positives [line 50]: partial
+    - slice argument `&[T]` lowered to List[T] borrow
+fn first_len [line 54]: partial
+    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
+fn or_default [line 58]: translated
+fn is_big [line 62]: translated
+fn opaque [line 66]: stubbed
+    - closure with untyped parameters (needs type inference)
+total 13 translated 9 partial 3 stubbed 1 skipped 0

@@ -173,10 +173,18 @@ impl<'a> FileCtx<'a> {
                         syn::Member::Unnamed(i) => i.index.to_string(),
                     };
                     let ft = si.as_ref().and_then(|s| s.fields.iter().find(|x| x.0 == n).map(|x| x.1.clone()));
+                    let fk = self.syms.field_kind(&sname, &n).cloned();
+                    if let Some(crate::symbols::FieldKind::Erased(cause)) = &fk {
+                        if !matches!(&*f.pat, Pat::Wild(_)) {
+                            return unsup(format!("uses a field erased to `Erased` (cause: {})", cause), tokens_str(p));
+                        }
+                        continue;
+                    }
                     let sub = match &f.member {
                         syn::Member::Named(_) => MExpr::attr(place.clone(), &names::ident(&n)),
                         syn::Member::Unnamed(_) => MExpr::attr(place.clone(), &format!("_{}", n)),
                     };
+                    let sub = if fk == Some(crate::symbols::FieldKind::Pointer) { MExpr::Index(Box::new(sub), vec![]) } else { sub };
                     out.extend(self.lower_pat(&f.pat, &sub, ft.as_ref())?);
                 }
             }

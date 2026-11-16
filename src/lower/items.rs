@@ -61,6 +61,14 @@ impl<'s> FnSpec<'s> {
     }
 }
 
+/// How one struct field is lowered (see `lower_field_type`).
+pub enum FieldPlan {
+    Normal,
+    Erased { key: String, detail: String },
+    Pointer { lifetime: String, mutable: bool },
+    StaticValue,
+}
+
 /// A struct (or enum lowered to a struct) awaiting impl methods.
 #[allow(dead_code)]
 struct TypeDecl {
@@ -218,6 +226,12 @@ impl<'a> FileCtx<'a> {
                     if is_test_only(&imp.attrs) {
                         continue;
                     }
+                    let lc = imp.span().start();
+                    if let Some((_, _, target)) = self.moved_impls.iter().find(|m| m.0 == lc.line && m.1 == lc.column) {
+                        let what = format!("{}{}", imp.trait_.as_ref().map(|(_, p, _)| format!("{} for ", tokens_str(p))).unwrap_or_default(), tokens_str(&*imp.self_ty));
+                        slots.push(Slot::Item(MItem::Comment(vec![format!("NOTE(rust-to-mojo): `impl {}` is translated in `{}`, merged into the type's definition (Mojo needs methods inside the struct).", what, target)])));
+                        continue;
+                    }
                     self.lower_impl(imp, &mut decls, &mut slots, &mut records, &mut internal_errors);
                 }
                 _ => {
@@ -264,6 +278,12 @@ impl<'a> FileCtx<'a> {
             }
         }
 
+        // Impls from other modules for types defined here.
+        let foreign = std::mem::take(&mut self.foreign_impls);
+        for fi in &foreign {
+            self.lower_foreign_impl(fi, &mut decls, &mut slots, &mut records, &mut internal_errors);
+        }
+        self.foreign_impls = foreign;
         records.sort_by_key(|r| r.line);
         // Assemble
         for s in slots {
@@ -283,6 +303,55 @@ impl<'a> FileCtx<'a> {
         // `from . import x` for pub child modules is only meaningful in packages.
         module.header_comments = header;
         ModuleOut { module, records, children, file_notes: std::mem::take(&mut self.file_notes), internal_errors, hints: vec![] }
+    }
+
+    /// Lower an impl written in another module, in that module's name
+    /// context (its `use` declarations), into this module's struct.
+    fn lower_foreign_impl(&mut self, fi: &ForeignImpl<'a>, decls: &mut HashMap<String, TypeDecl>, slots: &mut Vec<Slot>, records: &mut Vec<ItemRecord>, internal_errors: &mut usize) {
+        let here = self.module_mojo_path();
+        let saved_src = self.src;
+        let saved_mp = std::mem::replace(&mut self.module_path, fi.module_path.clone());
+        let saved_vi = std::mem::take(&mut self.variant_imports);
+        let saved_notes = self.file_notes.len();
+        self.src = fi.src;
+        let mut scratch = vec![];
+        for item in fi.items {
+            if let Item::Use(u) = item {
+                if !is_test_only(&u.attrs) {
+                    self.lower_use(&u.tree, vec![], u.leading_colon.is_some(), &mut scratch);
+                }
+            }
+        }
+        // names the impl's own module defines and the impl mentions
+        let there = self.module_mojo_path();
+        let imp_tokens = fi.imp;
+        let mentioned = idents_in(&quote::quote!(#imp_tokens).to_string());
+        for item in fi.items {
+            let n = match item {
+                Item::Fn(f) => f.sig.ident.to_string(),
+                Item::Struct(s) => s.ident.to_string(),
+                Item::Enum(e) => e.ident.to_string(),
+                Item::Trait(t) => t.ident.to_string(),
+                Item::Const(c) => c.ident.to_string(),
+                Item::Static(s) => s.ident.to_string(),
+                Item::Type(t) => t.ident.to_string(),
+                _ => continue,
+            };
+            if mentioned.contains(&n) {
+                self.import(&there, &n);
+            }
+        }
+        let first = records.len();
+        self.lower_impl(fi.imp, decls, slots, records, internal_errors);
+        for r in &mut records[first..] {
+            r.name = format!("{} (from {})", r.name, fi.label);
+        }
+        self.file_notes.truncate(saved_notes);
+        self.src = saved_src;
+        self.module_path = saved_mp;
+        self.variant_imports = saved_vi;
+        // the module never imports from itself
+        self.imports.retain(|i| i.module != here);
     }
 
     fn signature_hint(&mut self, sig: &syn::Signature) -> Option<String> {
@@ -504,18 +573,43 @@ impl<'a> FileCtx<'a> {
             syn::Fields::Unnamed(u) => u.unnamed.iter().enumerate().map(|(i, f)| (format!("_{}", i), f)).collect(),
             syn::Fields::Unit => vec![],
         };
+        let lifetimes: Vec<String> = s.generics.lifetimes().map(|l| l.lifetime.ident.to_string()).collect();
+        let mut origins: Vec<(String, bool)> = vec![];
         for (fname, f) in iter {
             if rty_last(&f.ty).as_deref() == Some("PhantomData") {
                 self.todo("PhantomData field dropped", format!("field `{}`", fname));
                 continue;
             }
-            let ty = self.lower_type(&f.ty)?;
+            let (ty, plan) = self.lower_field_type(&f.ty, &lifetimes)?;
             if type_mentions(&ty, &name) {
                 return unsup("recursive struct (Mojo forbids self-referential structs; needs pointers)", name.clone());
+            }
+            match &plan {
+                FieldPlan::Normal => {}
+                FieldPlan::Erased { key, detail } => {
+                    self.import("mojo_rt.erased", "Erased");
+                    self.todo("field type erased to `Erased` (code using the field is stubbed)", format!("{}.{}: {} ({})", name, fname, key, detail));
+                }
+                FieldPlan::Pointer { lifetime, mutable } => {
+                    match origins.iter_mut().find(|o| &o.0 == lifetime) {
+                        Some(o) => o.1 |= *mutable,
+                        None => origins.push((lifetime.clone(), *mutable)),
+                    }
+                    self.todo("borrowed-reference field lowered to `Pointer` with an origin parameter", format!("{}.{}: {}", name, fname, tokens_str(&f.ty)));
+                }
+                FieldPlan::StaticValue => {
+                    self.todo("`&'static` field stored by value (copy of immutable static data)", format!("{}.{}: {}", name, fname, tokens_str(&f.ty)));
+                }
             }
             fields.push((fname.clone(), ty.clone()));
             st.members.push(MMember::Field(MField { name: fname, ty, doc: doc_of(&f.attrs) }));
         }
+        // origin parameters go first, mirroring Rust's lifetimes-first order
+        let origin_params: Vec<MParam> = origins
+            .iter()
+            .map(|(lt, m)| MParam { name: format!("origin_{}", lt), bound: Some(if *m { "MutOrigin".into() } else { "ImmOrigin".into() }) })
+            .collect();
+        st.params.splice(0..0, origin_params);
         for a in &s.attrs {
             if a.path().is_ident("repr") {
                 st.comments.push(format!("NOTE(rust-to-mojo): Rust {} -- verify Mojo layout if this crosses FFI", tokens_str(&a.meta)));
@@ -530,6 +624,99 @@ impl<'a> FileCtx<'a> {
             self.hint_struct(&mut st, &fields);
         }
         Ok(TypeDecl { name, pre: vec![], main: st, generics, param_traits, record: 0 })
+    }
+
+    /// Lower a struct field's type. Fields whose type Mojo cannot express are
+    /// not fatal for the struct any more: `dyn Trait`, unmapped std types and
+    /// the like are erased to an opaque `mojo_rt.erased.Erased` (code that
+    /// touches the field is stubbed instead), `&'a T` becomes
+    /// `Pointer[T, Self.origin_a]`, and `&'static T` is stored by value.
+    pub fn lower_field_type(&mut self, ty: &Type, lifetimes: &[String]) -> LResult<(MType, FieldPlan)> {
+        if let Type::Reference(r) = ty {
+            if rty_last(&r.elem).as_deref() != Some("str") {
+                let lt = r.lifetime.as_ref().map(|l| l.ident.to_string()).unwrap_or_default();
+                let inner = match &*r.elem {
+                    Type::Slice(sl) if lt == "static" => self.lower_type(&sl.elem).map(|t| MType::generic("List", vec![t])),
+                    Type::Slice(_) | Type::TraitObject(_) => unsup("reference to an unsized type in a field", tokens_str(ty)),
+                    e => self.lower_type(e),
+                };
+                return Ok(match inner {
+                    Ok(t) if lt == "static" => (t, FieldPlan::StaticValue),
+                    Ok(t) if lifetimes.contains(&lt) => {
+                        self.import("std.memory", "Pointer");
+                        (MType::Named("Pointer".into(), vec![MTypeArg::Type(t), MTypeArg::Type(MType::named(format!("Self.origin_{}", lt)))]), FieldPlan::Pointer { lifetime: lt, mutable: r.mutability.is_some() })
+                    }
+                    Ok(_) => (MType::named("Erased"), FieldPlan::Erased { key: "reference type in field/value position (needs Pointer + origin)".into(), detail: tokens_str(ty) }),
+                    Err(u) => (MType::named("Erased"), FieldPlan::Erased { key: u.key, detail: u.detail }),
+                });
+            }
+        }
+        match self.lower_type(ty) {
+            Ok(t) => Ok((t, FieldPlan::Normal)),
+            Err(u) if u.key.starts_with("internal error") => Err(u),
+            Err(u) => Ok((MType::named("Erased"), FieldPlan::Erased { key: u.key, detail: u.detail })),
+        }
+    }
+
+    /// Pass 1b: decide how every struct field in `items` is lowered, so that
+    /// field accesses in *other* modules know which fields are erased or
+    /// pointers. Returns (struct, field, kind) plus each struct's origin params.
+    pub fn probe_fields(&mut self, items: &[Item], recurse: bool) -> (Vec<(String, String, crate::symbols::FieldKind)>, Vec<(String, Vec<String>)>) {
+        use crate::symbols::FieldKind;
+        let mut plans = vec![];
+        let mut origins = vec![];
+        for item in items {
+            match item {
+                Item::Struct(s) if !is_test_only(&s.attrs) => {
+                    let name = s.ident.to_string();
+                    self.ts = TypeScope { self_name: Some(name.clone()), ..Default::default() };
+                    let saved = self.begin_fn();
+                    let ok = catch_unwind(AssertUnwindSafe(|| self.lower_generics(&s.generics, true, true).is_ok())).unwrap_or(false);
+                    let lifetimes: Vec<String> = s.generics.lifetimes().map(|l| l.lifetime.ident.to_string()).collect();
+                    let mut os: Vec<String> = vec![];
+                    if ok {
+                        let fields: Vec<(String, &syn::Field)> = match &s.fields {
+                            syn::Fields::Named(n) => n.named.iter().map(|f| (f.ident.as_ref().unwrap().to_string(), f)).collect(),
+                            syn::Fields::Unnamed(u) => u.unnamed.iter().enumerate().map(|(i, f)| (i.to_string(), f)).collect(),
+                            syn::Fields::Unit => vec![],
+                        };
+                        for (fname, f) in fields {
+                            if rty_last(&f.ty).as_deref() == Some("PhantomData") {
+                                continue;
+                            }
+                            let r = catch_unwind(AssertUnwindSafe(|| self.lower_field_type(&f.ty, &lifetimes)));
+                            match r {
+                                Ok(Ok((_, FieldPlan::Erased { key, .. }))) => plans.push((name.clone(), fname, FieldKind::Erased(key))),
+                                Ok(Ok((_, FieldPlan::Pointer { lifetime, .. }))) => {
+                                    if !os.contains(&lifetime) {
+                                        os.push(lifetime);
+                                    }
+                                    plans.push((name.clone(), fname, FieldKind::Pointer));
+                                }
+                                Ok(Ok((_, FieldPlan::StaticValue))) => plans.push((name.clone(), fname, FieldKind::StaticValue)),
+                                _ => {}
+                            }
+                        }
+                    }
+                    self.end_fn(saved);
+                    // keep the struct's own lifetime order
+                    os.sort_by_key(|o| lifetimes.iter().position(|l| l == o));
+                    origins.push((name, os));
+                }
+                Item::Mod(m) if recurse && !is_test_only(&m.attrs) => {
+                    if let Some((_, inner)) = &m.content {
+                        let (p, o) = self.probe_fields(inner, true);
+                        plans.extend(p);
+                        origins.extend(o);
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.ts = TypeScope::default();
+        self.todos.clear();
+        self.imports.clear();
+        (plans, origins)
     }
 
     // ==================================================================================
@@ -944,6 +1131,14 @@ impl<'a> FileCtx<'a> {
         })();
 
         if let Some(u) = whole_reason {
+            // `impl LocalTrait for f32` / for a type from another crate: Mojo has
+            // no extensions, so the methods become free functions.
+            let foreign_target = u.key.starts_with("impl on a std/primitive type") || u.key.starts_with("impl for an external type");
+            let local_trait = trait_name.as_ref().map(|t| self.syms.traits.contains(t)).unwrap_or(false);
+            if foreign_target && local_trait && !method_items.is_empty() && imp.generics.params.is_empty() {
+                self.lower_extension_impl(imp, trait_name.as_deref().unwrap_or(""), &type_label, &method_items, slots, records, internal_errors);
+                return;
+            }
             if method_items.is_empty() {
                 // marker / assoc-only impl: one record for the impl itself
                 let span = imp.span();
@@ -1037,8 +1232,8 @@ impl<'a> FileCtx<'a> {
                                         setup_err = Some(Unsupported { key: "closure-typed impl parameter".into(), detail: t.into() });
                                         continue;
                                     }
+                                    // documented 1.0 form: `def sort() where conforms_to(Self.T, Comparable):`
                                     wheres.push(format!("conforms_to({}, {})", target, t));
-                                    self.todo("method gated on an extra trait bound (`where conforms_to`)", format!("{}: {}", target, t));
                                     cond_conformance.push(format!("conforms_to({}, {})", decl_name, t));
                                 }
                             }
@@ -1082,6 +1277,20 @@ impl<'a> FileCtx<'a> {
                 }
                 "Display" | "Debug" | "Default" | "Clone" => {
                     add_conformance = names::std_trait(t).map(|s| s.to_string());
+                }
+                "Add" | "Sub" | "Mul" | "Div" | "Rem" | "Neg" => {
+                    // `impl Add for X` with `Rhs = Self, Output = Self` makes X usable
+                    // where Rust code has `T: Add<Output = T>` (mojo_rt.ops dispatch).
+                    let self_tokens = tokens_str(&*imp.self_ty);
+                    let is_self = |t: &Type| tokens_str(t) == self_tokens || rty_last(t).as_deref() == Some("Self");
+                    let rhs_self = trait_path.as_ref().and_then(first_type_arg).map(|t| is_self(&t)).unwrap_or(true);
+                    let out_self = imp.items.iter().any(|i| matches!(i, ImplItem::Type(ty) if ty.ident == "Output" && is_self(&ty.ty)));
+                    let rhs_f32 = trait_path.as_ref().and_then(first_type_arg).map(|t| rty_last(&t).as_deref() == Some("f32")).unwrap_or(false);
+                    if rhs_self && out_self {
+                        add_conformance = Some(format!("R{}", t));
+                    } else if rhs_f32 && out_self && (t == "Mul" || t == "Div") {
+                        add_conformance = Some(format!("R{}F32", t));
+                    }
                 }
                 x if self.syms.traits.contains(x) => {
                     add_conformance = Some(x.to_string());
@@ -1281,7 +1490,14 @@ impl<'a> FileCtx<'a> {
         }
         if let Some(c) = add_conformance {
             // only conform when every method made it through
-            let all_ok = !new_members.iter().any(|m| matches!(m, MMember::Stub(_)));
+            let mut all_ok = !new_members.iter().any(|m| matches!(m, MMember::Stub(_)));
+            if ["RAdd", "RSub", "RMul", "RDiv", "RRem", "RNeg", "RMulF32", "RDivF32"].contains(&c.as_str()) {
+                // the trait requires `def __add__(self, rhs: Self) -> Self` exactly
+                all_ok &= new_members.iter().any(|m| matches!(m, MMember::Method(f) if f.name.starts_with("__") && f.args.iter().all(|a| a.conv == Conv::Default) && f.where_clauses.is_empty()));
+                if all_ok {
+                    self.import("mojo_rt.ops", &c);
+                }
+            }
             if all_ok {
                 if cond_conformance.is_empty() && wheres.is_empty() {
                     d.main.add_trait(&c);
@@ -1290,10 +1506,66 @@ impl<'a> FileCtx<'a> {
                 }
             }
         }
+        if method_items.is_empty() && !imp.items.iter().any(|i| matches!(i, ImplItem::Const(_))) {
+            // marker / associated-type-only impl: still one coverage record
+            let label = format!("{} for {}", tn.clone().unwrap_or_default(), sn);
+            records.push(Self::record("impl", &label, imp.span(), &Ok(()), &setup_todos));
+        }
         d.main.members.extend(extra_members);
         d.main.members.extend(new_members);
         if !records.is_empty() {
             let _ = d.record;
+        }
+    }
+
+    /// `impl Trait for f32 { fn half(&self) -> Self }` becomes
+    /// `def Trait_f32_half(self: Float32) -> Float32`, with a TODO: call sites
+    /// written with method syntax (`x.half()`) are not rewritten, and the type
+    /// does not conform to the trait.
+    fn lower_extension_impl(&mut self, imp: &syn::ItemImpl, trait_name: &str, type_label: &str, methods: &[&syn::ImplItemFn], slots: &mut Vec<Slot>, records: &mut Vec<ItemRecord>, internal_errors: &mut usize) {
+        let self_ty = (*imp.self_ty).clone();
+        let mut assoc = HashMap::new();
+        for i in &imp.items {
+            if let ImplItem::Type(t) = i {
+                assoc.insert(t.ident.to_string(), t.ty.clone());
+            }
+        }
+        for f in methods {
+            let fname = format!("{}_{}_{}", trait_name, type_label, f.sig.ident);
+            let rec_name = format!("{}.{} (extension fn {})", type_label, f.sig.ident, fname);
+            if is_test_only(&f.attrs) {
+                continue;
+            }
+            let self_ty2 = self_ty.clone();
+            let assoc2 = assoc.clone();
+            let fname2 = fname.clone();
+            let (r, mut todos) = self.run_item(|this| {
+                let concrete = this.lower_type(&self_ty2)?;
+                this.ts = TypeScope { self_rty: Some(self_ty2.clone()), assoc: assoc2, self_concrete: Some(concrete.clone()), ..Default::default() };
+                let spec = FnSpec { sig: &f.sig, block: Some(&f.block), attrs: &f.attrs, mojo_name: Some(fname2), in_type: false, mode: FnMode::Normal, static_decorator: false, wheres: vec![], lhs_rty: None, extra_generics: None };
+                let mut mf = this.lower_fn_item(&spec)?;
+                if let Some(a) = mf.args.iter_mut().find(|a| a.name == "self") {
+                    if a.conv == Conv::Var {
+                        a.conv = Conv::Default;
+                    }
+                    a.ty = Some(concrete);
+                }
+                Ok(mf)
+            });
+            todos.insert(0, Reason { key: "extension impl lowered to a free function (Mojo has no extensions)".into(), detail: format!("impl {} for {} -> {}(self, ...); method-syntax call sites are not rewritten", trait_name, type_label, fname) });
+            records.push(Self::record("method", &rec_name, f.span(), &r.as_ref().map(|_| ()), &todos));
+            match r {
+                Ok(mut mf) => {
+                    mf.comments.splice(0..0, Self::todo_comments(&todos));
+                    slots.push(Slot::Item(MItem::Function(mf)));
+                }
+                Err(u) => {
+                    if u.key.starts_with("internal error") {
+                        *internal_errors += 1;
+                    }
+                    slots.push(Slot::Item(MItem::Stub(self.stub("method", &rec_name, f.span(), &u))));
+                }
+            }
         }
     }
 
@@ -1500,16 +1772,23 @@ impl<'a> FileCtx<'a> {
                     let mut by_ref = false;
                     let mut by_mut = false;
                     if let Type::Reference(r) = ty {
-                        if let Type::ImplTrait(_) = &*r.elem {
+                        if matches!(&*r.elem, Type::ImplTrait(_)) || dyn_as_generic(&r.elem, self.syms) {
                             by_ref = true;
                             by_mut = r.mutability.is_some();
                             ty = &r.elem;
                         }
                     }
-                    let (conv, mty, is_ref_ty) = if let Type::ImplTrait(it) = ty {
+                    let opaque_bounds = match ty {
+                        Type::ImplTrait(it) => Some(&it.bounds),
+                        // `&dyn Trait` argument: static dispatch through a generic
+                        // parameter is observably the same for the callee
+                        Type::TraitObject(to) => Some(&to.bounds),
+                        _ => None,
+                    };
+                    let (conv, mty, is_ref_ty) = if let Some(obounds) = opaque_bounds {
                         impl_trait_n += 1;
                         let pname = format!("F{}", impl_trait_n);
-                        let bound = self.lower_bounds(it.bounds.iter(), &pname, false)?;
+                        let bound = self.lower_bounds(obounds.iter(), &pname, false)?;
                         if bound.starts_with("def(") {
                             f.params.push(MParam { name: pname.clone(), bound: Some(bound) });
                             (Conv::Default, MType::named(pname), false)
@@ -1561,6 +1840,9 @@ impl<'a> FileCtx<'a> {
                 if spec.mode == FnMode::Fmt || spec.mode == FnMode::CopyInit || spec.mode == FnMode::Deinit {
                     // handled by mode
                 } else {
+                    if let (Type::ImplTrait(_), Some(b)) = (&**t, spec.block) {
+                        self.f.impl_trait_tail = self.concrete_tail_type(b);
+                    }
                     self.lower_return_type(t, f, receiver_seen, &inputs)?;
                 }
             }
@@ -1597,6 +1879,14 @@ impl<'a> FileCtx<'a> {
             }
         }
         if let Type::ImplTrait(_) = t {
+            // the concrete type of the body's tail, when it is a crate type
+            if let Some(ct) = self.f.impl_trait_tail.clone() {
+                let mt = self.lower_type(&ct)?;
+                self.f.ret_rty = Some(ct);
+                f.ret = RetType::Value(mt.clone());
+                self.f.ret_mty = Some(mt);
+                return Ok(());
+            }
             return unsup("`impl Trait` return type", tokens_str(t));
         }
         if let Type::Never(_) = t {
@@ -1668,11 +1958,60 @@ impl<'a> FileCtx<'a> {
             self.f.ret_mty = Some(mt);
             return Ok(());
         }
-        let mt = self.lower_type(t)?;
+        let mt = match self.option_ref_type(t) {
+            Some(r) => r?,
+            None => self.lower_type(t)?,
+        };
         self.f.ret_rty = Some(t.clone());
         f.ret = RetType::Value(mt.clone());
         self.f.ret_mty = Some(mt);
         Ok(())
+    }
+
+    /// For `-> impl Trait`: the tail expression's type when it is a concrete,
+    /// non-generic crate struct/enum (a constructor, struct literal, or a call
+    /// to a crate fn returning one). Every `return` must agree.
+    fn concrete_tail_type(&self, b: &syn::Block) -> Option<Type> {
+        let syn::Stmt::Expr(tail, None) = b.stmts.last()? else { return None };
+        let mut t = self.type_of(tail);
+        if t.is_none() {
+            if let syn::Expr::Call(c) = tail {
+                if let syn::Expr::Path(p) = &*c.func {
+                    if p.path.segments.len() == 1 {
+                        let n = p.path.segments[0].ident.to_string();
+                        if let Some(s) = self.find_sig(&n, None, c.args.len(), false) {
+                            if s.sig.generics.params.is_empty() {
+                                if let ReturnType::Type(_, rt) = &s.sig.output {
+                                    t = Some((**rt).clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let t = t?;
+        let n = rty_last(&t)?;
+        let concrete = (self.syms.structs.get(&n).map(|s| s.generics.is_empty()).unwrap_or(false) || self.syms.enums.get(&n).map(|e| e.generics.is_empty()).unwrap_or(false)) && rty_args(&t).is_empty();
+        if !concrete {
+            return None;
+        }
+        // early returns must not exist (their types are not checked here)
+        use syn::visit::Visit;
+        struct V(bool);
+        impl<'ast> Visit<'ast> for V {
+            fn visit_expr_return(&mut self, _: &'ast syn::ExprReturn) {
+                self.0 = true;
+            }
+            fn visit_expr_closure(&mut self, _: &'ast syn::ExprClosure) {}
+        }
+        let mut v = V(false);
+        v.visit_block(b);
+        if v.0 {
+            None
+        } else {
+            Some(t)
+        }
     }
 
     pub fn is_copy_rty(&self, t: &Type) -> bool {
@@ -1685,6 +2024,10 @@ impl<'a> FileCtx<'a> {
                     return true;
                 }
                 if n == "Option" {
+                    // `Option<&T>` is Copy in Rust
+                    if matches!(rty_args(t).first(), Some(Type::Reference(r)) if r.mutability.is_none()) {
+                        return true;
+                    }
                     return rty_args(t).first().map(|a| self.is_copy_rty(a)).unwrap_or(false);
                 }
                 if n == "Self" {
@@ -1703,6 +2046,11 @@ impl<'a> FileCtx<'a> {
     }
 }
 
+/// Identifier-like tokens in a token string.
+fn idents_in(s: &str) -> std::collections::HashSet<String> {
+    s.split(|c: char| !c.is_alphanumeric() && c != '_').filter(|w| !w.is_empty()).map(|w| w.to_string()).collect()
+}
+
 /// One header line per external crate, listing every dropped `use`.
 fn push_ext(header: &mut Vec<String>, krate: &str, full: &str) {
     let prefix = format!("TODO(rust-to-mojo): external crate `{}` has no Mojo port; dropped: use ", krate);
@@ -1712,6 +2060,27 @@ fn push_ext(header: &mut Vec<String>, krate: &str, full: &str) {
     } else {
         header.push(format!("{}{}", prefix, full));
     }
+}
+
+/// `dyn A + B` behind a reference whose traits are all crate traits or `Fn*`
+/// (not `Any`, which needs runtime type information).
+fn dyn_as_generic(t: &Type, syms: &crate::symbols::Symbols) -> bool {
+    let Type::TraitObject(to) = t else { return false };
+    let mut any = false;
+    for b in &to.bounds {
+        if let syn::TypeParamBound::Trait(tb) = b {
+            let n = path_last(&tb.path);
+            if n == "Send" || n == "Sync" || n == "Unpin" {
+                continue;
+            }
+            if n == "Fn" || n == "FnMut" || n == "FnOnce" || (syms.traits.contains(&n) && tb.path.segments.last().map(|s| s.arguments.is_empty()).unwrap_or(false)) {
+                any = true;
+            } else {
+                return false;
+            }
+        }
+    }
+    any
 }
 
 /// Overload identity: name + argument types/conventions + where clauses.

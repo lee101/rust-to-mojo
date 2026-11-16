@@ -1,6 +1,9 @@
+from mojo_rt import ops
+from mojo_rt.ops import RAdd
+
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable):
+struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable, RAdd):
     var x: Self.T
     var y: Self.T
 
@@ -8,9 +11,8 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
         self.x = Self.T()
         self.y = Self.T()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __add__(self, rhs: Self) -> Self:
-        return Point(x=self.x + rhs.x, y=self.y + rhs.y)
+        return Point(x=ops.add(self.x, rhs.x), y=ops.add(self.y, rhs.y))
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
@@ -32,17 +34,11 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         self.origin = Point[Self.T]()
         self.size = Size[Self.T]()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def right(self) -> Self.T:
-        return self.origin.x.copy() + self.size.width.copy()
+        return ops.add(self.origin.x.copy(), self.size.width.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def bottom(self) -> Self.T:
-        return self.origin.y.copy() + self.size.height.copy()
+        return ops.add(self.origin.y.copy(), self.size.height.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def contains(self, point: Point[Self.T]) -> Bool where conforms_to(Self.T, Comparable):
-        return point.x >= self.origin.x and point.x <= self.origin.x.copy() + self.size.width.copy() and point.y >= self.origin.y and point.y <= self.origin.y.copy() + self.size.height.copy()
+        return point.x >= self.origin.x and point.x <= ops.add(self.origin.x.copy(), self.size.width.copy()) and point.y >= self.origin.y and point.y <= ops.add(self.origin.y.copy(), self.size.height.copy())

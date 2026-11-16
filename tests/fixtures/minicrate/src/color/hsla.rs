@@ -12,3 +12,10 @@ pub struct Hsla {
 pub fn at(p: Point) -> Hsla {
     Hsla { h: p.x, s: p.y, l: 0.5, a: 1.0 }
 }
+
+/// An impl for a type defined in another module: merged into `Point`.
+impl Point {
+    pub fn to_hsla(&self) -> Hsla {
+        at(*self)
+    }
+}

@@ -1,10 +1,11 @@
 from mojo_rt.num import fmax, round_half_away
+from mojo_rt.ops import RAdd, RMulF32, RNeg, RSub
 from std.math import floor
 
 # TODO(rust-to-mojo): derive(PartialOrd) over float fields: NaN ordering follows Mojo comparisons -- Pixels
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Pixels(ImplicitlyCopyable, Equatable, Writable, Defaultable, Comparable):
+struct Pixels(ImplicitlyCopyable, Equatable, Writable, Defaultable, Comparable, RAdd, RSub, RMulF32, RNeg):
     """Logical pixels."""
     var _0: Float32
 

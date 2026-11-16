@@ -42,6 +42,9 @@ pub const RUNTIME_FILES: &[(&str, &str)] = &[
     ("mojo_rt/dict.mojo", include_str!("../mojo_rt/dict.mojo")),
     ("mojo_rt/cell.mojo", include_str!("../mojo_rt/cell.mojo")),
     ("mojo_rt/range.mojo", include_str!("../mojo_rt/range.mojo")),
+    ("mojo_rt/ops.mojo", include_str!("../mojo_rt/ops.mojo")),
+    ("mojo_rt/erased.mojo", include_str!("../mojo_rt/erased.mojo")),
+    ("mojo_rt/sync.mojo", include_str!("../mojo_rt/sync.mojo")),
 ];
 
 fn parse(src: &str) -> Result<syn::File, String> {
@@ -203,6 +206,39 @@ pub fn translate_path(input: &Path, opts: &Options) -> Result<Output, String> {
         syms.collect_items(&u.items, &u.module_path);
     }
 
+    // pass 1b: field plans (erased / pointer fields), needed by every module
+    let mut plans = vec![];
+    let mut origins = vec![];
+    for u in &units {
+        if u.parse_error.is_some() {
+            continue;
+        }
+        let mut ctx = FileCtx::new(&syms, &u.src, opts, u.module_path.clone(), pkg.clone());
+        let (p, o) = ctx.probe_fields(&u.items, false);
+        plans.extend(p);
+        origins.extend(o);
+    }
+    syms.add_field_plans(plans, origins);
+
+    // pass 1c: impls written outside the module that defines their type
+    // move into that module (Mojo needs methods inside the struct).
+    let mut foreign: Vec<(Vec<String>, usize, usize)> = vec![]; // (home, unit, item)
+    for (ui, u) in units.iter().enumerate() {
+        for (ii, item) in u.items.iter().enumerate() {
+            let syn::Item::Impl(imp) = item else { continue };
+            if crate::lower::is_test_only(&imp.attrs) {
+                continue;
+            }
+            let syn::Type::Path(tp) = &*imp.self_ty else { continue };
+            let Some(name) = tp.path.segments.last().map(|s| s.ident.to_string()) else { continue };
+            if let Some(home) = syms.type_home(&name) {
+                if home != &u.module_path && units.iter().any(|x| &x.module_path == home && x.parse_error.is_none()) {
+                    foreign.push((home.clone(), ui, ii));
+                }
+            }
+        }
+    }
+
     let mut files = vec![];
     let mut reports = vec![];
     let mut hints = vec![];
@@ -228,6 +264,19 @@ pub fn translate_path(input: &Path, opts: &Options) -> Result<Output, String> {
             continue;
         }
         let mut ctx = FileCtx::new(&syms, &u.src, opts, u.module_path.clone(), pkg.clone());
+        for (home, ui, ii) in &foreign {
+            let fu = &units[*ui];
+            let syn::Item::Impl(imp) = &fu.items[*ii] else { continue };
+            if home == &u.module_path {
+                ctx.foreign_impls.push(crate::lower::ForeignImpl { src: &fu.src, module_path: fu.module_path.clone(), items: &fu.items, imp, label: fu.label.clone() });
+            } else if fu.module_path == u.module_path && std::ptr::eq(fu, u) {
+                use syn::spanned::Spanned;
+                let lc = imp.span().start();
+                let mut target = vec![pkg.clone()];
+                target.extend(home.iter().map(|s| crate::lower::names::ident(s)));
+                ctx.moved_impls.push((lc.line, lc.column, target.join(".")));
+            }
+        }
         let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ctx.lower_module(&u.inner_attrs, &u.items)));
         match res {
             Ok(mut out) => {
@@ -277,6 +326,8 @@ pub fn translate_source(src: &str, module_name: &str, opts: &Options) -> (String
     let mut syms = Symbols { crate_name: module_name.into(), ..Default::default() };
     syms.modules.insert(String::new());
     syms.collect_items(&file.items, &[]);
+    let (plans, origins) = FileCtx::new(&syms, src, opts, vec![], module_name.into()).probe_fields(&file.items, true);
+    syms.add_field_plans(plans, origins);
     let mut ctx = FileCtx::new(&syms, src, opts, vec![], module_name.into());
     let mut out = ctx.lower_module(&file.attrs, &file.items);
     out.module.imports.retain(|i| i.module != ".");

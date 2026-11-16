@@ -8,6 +8,7 @@
 
 pub mod derive;
 pub mod expr;
+pub mod infer;
 pub mod items;
 pub mod iters;
 pub mod macros;
@@ -76,6 +77,11 @@ pub struct FnState {
     pub init_self: bool,
     /// Inferred numeric type for the `let` currently being lowered.
     pub let_hint: Option<syn::Type>,
+    /// Parameter/return types for the closure about to be lowered, taken
+    /// from the call it is passed to (see `infer.rs`).
+    pub closure_hint: Option<infer::ClosureHint>,
+    /// Concrete type of the tail of a `-> impl Trait` function, if known.
+    pub impl_trait_tail: Option<syn::Type>,
 }
 
 /// Generic-parameter context while lowering a struct, impl or trait.
@@ -91,6 +97,8 @@ pub struct TypeScope {
     pub in_trait: bool,
     /// Associated types declared in the current impl (`type Output = X;`).
     pub assoc: HashMap<String, syn::Type>,
+    /// Lowering an impl for a foreign type as free functions: what `Self` means.
+    pub self_concrete: Option<MType>,
 }
 
 pub struct FileCtx<'a> {
@@ -110,6 +118,23 @@ pub struct FileCtx<'a> {
     pub tmp_counter: usize,
     /// Types in this module that were stubbed, with the root-cause key.
     pub stubbed_types: HashMap<String, String>,
+    /// Impls written in other modules of the crate for types defined here;
+    /// Mojo needs every method inside the struct, so they are merged in.
+    pub foreign_impls: Vec<ForeignImpl<'a>>,
+    /// (line, column) of impls in this module that were moved to the module
+    /// defining their self type, with that module's Mojo path.
+    pub moved_impls: Vec<(usize, usize, String)>,
+}
+
+/// An `impl` block from another module (see `FileCtx::foreign_impls`).
+pub struct ForeignImpl<'a> {
+    pub src: &'a str,
+    pub module_path: Vec<String>,
+    /// All items of the impl's module (for its `use` declarations and the
+    /// names it defines).
+    pub items: &'a [syn::Item],
+    pub imp: &'a syn::ItemImpl,
+    pub label: String,
 }
 
 impl<'a> FileCtx<'a> {
@@ -129,11 +154,20 @@ impl<'a> FileCtx<'a> {
             ts: TypeScope::default(),
             tmp_counter: 0,
             stubbed_types: HashMap::new(),
+            foreign_impls: vec![],
+            moved_impls: vec![],
         }
     }
 
     pub fn import(&mut self, module: &str, name: &str) {
         self.imports.insert(MImport { module: module.to_string(), name: Some(name.to_string()), alias: None });
+    }
+
+    /// `ops.add` with `from mojo_rt import ops`: the arithmetic dispatch
+    /// functions have short names that would collide with user functions.
+    pub fn rt_ops(&mut self, name: &str) -> MExpr {
+        self.import("mojo_rt", "ops");
+        MExpr::attr(MExpr::name("ops"), name)
     }
 
     pub fn rt(&mut self, module: &str, name: &str) -> MExpr {

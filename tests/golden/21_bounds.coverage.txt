@@ -1,15 +1,8 @@
 struct Point [line 4]: translated
 struct Size [line 10]: translated
 struct Bounds [line 16]: translated
-method Bounds.right [line 26]: partial
-    - dropped bound `Add` (no Mojo std trait)
-    - dropped bound `Sub` (no Mojo std trait)
-method Bounds.bottom [line 30]: partial
-    - dropped bound `Add` (no Mojo std trait)
-    - dropped bound `Sub` (no Mojo std trait)
-method Bounds.contains [line 39]: partial
-    - dropped bound `Add` (no Mojo std trait)
-    - method gated on an extra trait bound (`where conforms_to`)
-method Point.add [line 49]: partial
-    - dropped bound `Add` (no Mojo std trait)
-total 7 translated 3 partial 4 stubbed 0 skipped 0
+method Bounds.right [line 26]: translated
+method Bounds.bottom [line 30]: translated
+method Bounds.contains [line 39]: translated
+method Point.add [line 49]: translated
+total 7 translated 7 partial 0 stubbed 0 skipped 0

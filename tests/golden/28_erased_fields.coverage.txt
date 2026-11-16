@@ -1,0 +1,27 @@
+trait Platform [line 5]: translated
+struct App [line 9]: partial
+    - field type erased to `Erased` (code using the field is stubbed)
+    - field type erased to `Erased` (code using the field is stubbed)
+method App.next_frame [line 17]: translated
+method App.title_len [line 23]: partial
+    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
+method App.platform_name [line 27]: stubbed
+    - uses a field erased to `Erased` (cause: `dyn Trait` (no existential types in Mojo))
+method App.new [line 32]: stubbed
+    - `dyn Trait` (no existential types in Mojo)
+struct Counter [line 38]: partial
+    - lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references)
+method Counter.bump [line 43]: partial
+    - lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references)
+method Counter.read [line 49]: partial
+    - lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references)
+struct Span [line 54]: partial
+    - borrowed-reference field lowered to `Pointer` with an origin parameter
+method Span.new [line 60]: partial
+    - borrowed-reference field initialised with `Pointer(to=...)` (the struct's origin parameter must be inferable at the call site)
+method Span.len [line 64]: partial
+    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
+struct Meta [line 69]: partial
+    - `&'static` field stored by value (copy of immutable static data)
+method Meta.get_id [line 75]: translated
+total 14 translated 3 partial 9 stubbed 2 skipped 0

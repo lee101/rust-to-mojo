@@ -1,3 +1,5 @@
+from mojo_rt.erased import Erased
+
 # TODO(rust-to-mojo): fn `raw_read` not translated: unsafe fn
 # --- original Rust ---
 # pub unsafe fn raw_read(p: *const u8) -> u8 {
@@ -35,14 +37,9 @@ trait Describe:
     def describe(self) -> String:
         ...
 
-# TODO(rust-to-mojo): impl `Describe for i32` not translated: impl on a std/primitive type (Mojo has no extensions)
-# --- original Rust ---
-# impl Describe for i32 {
-#     fn describe(&self) -> String {
-#         format!("int {}", self)
-#     }
-# }
-# --- end original Rust ---
+# TODO(rust-to-mojo): extension impl lowered to a free function (Mojo has no extensions) -- impl Describe for i32 -> Describe_i32_describe(self, ...); method-syntax call sites are not rewritten
+def Describe_i32_describe(self: Int32) -> String:
+    return String("int ") + String(self)
 
 # TODO(rust-to-mojo): impl `Describe for Vec` not translated: impl on a std/primitive type (Mojo has no extensions)
 # --- original Rust ---
@@ -53,12 +50,10 @@ trait Describe:
 # }
 # --- end original Rust ---
 
-# TODO(rust-to-mojo): struct `Holder` not translated: reference type in field/value position (needs Pointer + origin) (type `&'a[u8]`)
-# --- original Rust ---
-# pub struct Holder<'a> {
-#     pub data: &'a [u8],
-# }
-# --- end original Rust ---
+# TODO(rust-to-mojo): field type erased to `Erased` (code using the field is stubbed) -- Holder.data: reference to an unsized type in a field (&'a[u8])
+@fieldwise_init
+struct Holder:
+    var data: Erased
 
 # TODO(rust-to-mojo): union `IntOrFloat` not translated: union
 # --- original Rust ---

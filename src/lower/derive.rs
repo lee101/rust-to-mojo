@@ -103,12 +103,9 @@ impl<'a> FileCtx<'a> {
                         self.unsupported_derive(d);
                         continue;
                     }
-                    if fields.iter().any(|(_, t)| generic_field(t)) {
-                        self.todo(
-                            format!("derive({}) on generic struct needs the parameter to support the operator", d),
-                            "no Mojo std trait for arithmetic; consider DType parameterisation",
-                        );
-                    }
+                    // A field whose type is a bare struct parameter (`Self.T`) has no
+                    // Mojo operator; it goes through the `mojo_rt.ops` dispatch.
+                    let bare_param = |t: &MType| matches!(t, MType::Named(n, a) if a.is_empty() && n.starts_with("Self."));
                     let (dunder, op, scalar, inplace) = match d.as_str() {
                         "Add" => ("__add__", BinOp::Add, false, false),
                         "Sub" => ("__sub__", BinOp::Sub, false, false),
@@ -132,8 +129,34 @@ impl<'a> FileCtx<'a> {
                         MType::named("Self")
                     };
                     let rhs = |n: &str| if scalar { MExpr::name("rhs") } else { MExpr::attr(MExpr::name("rhs"), n) };
+                    let opname = if d == "Neg" { "neg" } else { types::ops_fn(op).unwrap_or("add") };
+                    let field_op = |this: &mut Self, n: &str, t: &MType| -> MExpr {
+                        let a = MExpr::attr(MExpr::name("self"), n);
+                        if bare_param(t) {
+                            let f = this.rt_ops(opname);
+                            if d == "Neg" {
+                                MExpr::call(f, vec![a])
+                            } else {
+                                MExpr::call(f, vec![a, rhs(n)])
+                            }
+                        } else if d == "Neg" {
+                            MExpr::Unary(UnOp::Neg, Box::new(a))
+                        } else {
+                            MExpr::bin(a, op, rhs(n))
+                        }
+                    };
+                    let trait_conf = match d.as_str() {
+                        "Add" => Some("RAdd"),
+                        "Sub" => Some("RSub"),
+                        "Neg" => Some("RNeg"),
+                        _ => None,
+                    };
+                    if let Some(tc) = trait_conf {
+                        self.import("mojo_rt.ops", tc);
+                        st.add_trait(tc);
+                    }
                     if d == "Neg" {
-                        let args: Vec<MArgVal> = fields.iter().map(|(n, _)| MArgVal::kw(n.clone(), MExpr::Unary(UnOp::Neg, Box::new(MExpr::attr(MExpr::name("self"), n))))).collect();
+                        let args: Vec<MArgVal> = fields.iter().map(|(n, t)| MArgVal::kw(n.clone(), field_op(self, n, t))).collect();
                         st.members.push(MMember::Method(MFunction {
                             name: dunder.into(),
                             args: vec![self_arg(Conv::Default)],
@@ -142,7 +165,10 @@ impl<'a> FileCtx<'a> {
                             ..Default::default()
                         }));
                     } else if inplace {
-                        let body: Vec<MStmt> = fields.iter().map(|(n, _)| MStmt::AugAssign(MExpr::attr(MExpr::name("self"), n), op, rhs(n))).collect();
+                        let body: Vec<MStmt> = fields
+                            .iter()
+                            .map(|(n, t)| if bare_param(t) { MStmt::Assign(MExpr::attr(MExpr::name("self"), n), field_op(self, n, t)) } else { MStmt::AugAssign(MExpr::attr(MExpr::name("self"), n), op, rhs(n)) })
+                            .collect();
                         st.members.push(MMember::Method(MFunction {
                             name: dunder.into(),
                             args: vec![self_arg(Conv::Mut), MArg { conv: Conv::Default, name: "rhs".into(), ty: Some(rhs_ty), kw_only: false }],
@@ -150,7 +176,7 @@ impl<'a> FileCtx<'a> {
                             ..Default::default()
                         }));
                     } else {
-                        let args: Vec<MArgVal> = fields.iter().map(|(n, _)| MArgVal::kw(n.clone(), MExpr::bin(MExpr::attr(MExpr::name("self"), n), op, rhs(n)))).collect();
+                        let args: Vec<MArgVal> = fields.iter().map(|(n, t)| MArgVal::kw(n.clone(), field_op(self, n, t))).collect();
                         st.members.push(MMember::Method(MFunction {
                             name: dunder.into(),
                             args: vec![self_arg(Conv::Default), MArg { conv: Conv::Default, name: "rhs".into(), ty: Some(rhs_ty), kw_only: false }],

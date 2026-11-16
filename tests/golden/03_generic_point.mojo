@@ -17,7 +17,6 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
     def swap(self) -> Self:
         return Point(x=self.y.copy(), y=self.x.copy())
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def max_coord(self) -> Self.T where conforms_to(Self.T, Comparable):
         if self.x > self.y:
             return self.x.copy()

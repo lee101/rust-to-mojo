@@ -1,0 +1,21 @@
+struct Pixels [line 4]: translated
+struct Rems [line 7]: translated
+method Pixels.from [line 11]: translated
+enum Length [line 16]: partial
+    - Debug on data enum maps to Variant's Writable (format differs from Rust)
+fn px_len [line 22]: translated
+fn width_of [line 26]: translated
+fn measure [line 30]: translated
+trait Shape [line 34]: translated
+struct Square [line 38]: translated
+method Square.area [line 43]: translated
+fn unit_square [line 48]: translated
+trait Half [line 52]: translated
+method f32.half (extension fn Half_f32_half) [line 57]: partial
+    - extension impl lowered to a free function (Mojo has no extensions)
+fn evens [line 62]: stubbed
+    - `impl Trait` return type
+fn label_len [line 67]: partial
+    - `Option<&T>` lowered to `Optional[T]` (copies the referent)
+    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
+total 15 translated 11 partial 3 stubbed 1 skipped 0

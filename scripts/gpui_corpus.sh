@@ -38,5 +38,8 @@ cp "$OUT/color/coverage.json" "$ROOT/reports/gpui/color.coverage.json"
 cp "$OUT/crate/coverage.json" "$ROOT/reports/gpui/crate.coverage.json"
 cp "$OUT/crate/coverage.md" "$ROOT/reports/gpui/crate.coverage.md"
 cp "$OUT/crate/hints.json" "$ROOT/reports/gpui/crate.hints.json"
-echo "zed revision: $ZED_REV" > "$ROOT/reports/gpui/SOURCE.txt"
+VER="$(grep -m1 '^version' "$ROOT/Cargo.toml" | sed 's/.*"\(.*\)"//')"
+printf 'zed-industries/zed revision: %s (crates/gpui)
+translator: rust-to-mojo %s
+' "$ZED_REV" "$VER" > "$ROOT/reports/gpui/SOURCE.txt"
 echo "reports refreshed in $ROOT/reports/gpui"

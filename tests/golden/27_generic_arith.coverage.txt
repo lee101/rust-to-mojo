@@ -1,0 +1,16 @@
+struct Pixels [line 4]: translated
+method Pixels.add [line 9]: translated
+method Pixels.sub [line 16]: translated
+method Pixels.mul [line 23]: translated
+struct Point [line 28]: translated
+method Point.add [line 36]: translated
+method Point.neg [line 43]: translated
+method Point.add_assign [line 49]: translated
+method Point.sum [line 59]: translated
+method Point.delta [line 63]: translated
+method Point.scale [line 69]: translated
+fn double [line 75]: translated
+fn bump [line 79]: partial
+    - dropped bound `Add` (no Mojo std trait)
+    - operator on a generic parameter with a different operand type
+total 13 translated 12 partial 1 stubbed 0 skipped 0

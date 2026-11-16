@@ -44,6 +44,10 @@ pub fn is_int_rty(t: &Type) -> bool {
     rty_last(t).map(|n| names::is_int(&n)).unwrap_or(false)
 }
 
+pub fn is_unit_rty(t: &Type) -> bool {
+    matches!(strip_ref(t), Type::Tuple(tt) if tt.elems.is_empty())
+}
+
 pub fn is_prim_rty(t: &Type) -> bool {
     rty_last(t).map(|n| names::is_numeric(&n) || n == "bool" || n == "char").unwrap_or(false)
 }
@@ -74,7 +78,66 @@ pub fn subst_rty(t: &Type, map: &HashMap<String, Type>) -> Type {
     out
 }
 
+/// Is `seg` (the last segment of an operator-trait bound on `owner`) of the
+/// form `Add<Output = T>`, `Add<T, Output = T>`, `AddAssign`, `AddAssign<T>` or
+/// `Neg<Output = T>`, i.e. an operator whose operands and result are all the
+/// bounded parameter itself? Only those can be lowered to `mojo_rt.ops`.
+pub fn self_typed_op_bound(trait_name: &str, seg: &syn::PathSegment, owner: &str) -> bool {
+    if !["Add", "Sub", "Mul", "Div", "Rem", "Neg", "AddAssign", "SubAssign", "MulAssign", "DivAssign", "RemAssign"].contains(&trait_name) {
+        return false;
+    }
+    let is_owner = |t: &Type| matches!(t, Type::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].arguments.is_empty() && (p.path.segments[0].ident == owner || p.path.segments[0].ident == "Self"));
+    // `Mul<S, Output = T>` / `Div<f32, Output = T>`: `ops.mul_rhs` / `ops.div_rhs`
+    let scalar_rhs = |t: &Type| ["Mul", "Div"].contains(&trait_name) && matches!(t, Type::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].arguments.is_empty());
+    let assign = trait_name.ends_with("Assign");
+    let mut output_ok = assign;
+    match &seg.arguments {
+        PathArguments::None => {}
+        PathArguments::AngleBracketed(a) => {
+            for g in &a.args {
+                match g {
+                    GenericArgument::Type(t) => {
+                        if !is_owner(t) && !scalar_rhs(t) {
+                            return false;
+                        }
+                    }
+                    GenericArgument::AssocType(at) if at.ident == "Output" => {
+                        if !is_owner(&at.ty) {
+                            return false;
+                        }
+                        output_ok = true;
+                    }
+                    GenericArgument::Lifetime(_) => {}
+                    _ => return false,
+                }
+            }
+        }
+        PathArguments::Parenthesized(_) => return false,
+    }
+    output_ok
+}
+
+/// `mojo_rt.ops` function for an arithmetic operator on a generic parameter.
+pub fn ops_fn(op: BinOp) -> Option<&'static str> {
+    Some(match op {
+        BinOp::Add => "add",
+        BinOp::Sub => "sub",
+        BinOp::Mul => "mul",
+        BinOp::Div => "div",
+        BinOp::Mod => "rem",
+        _ => return None,
+    })
+}
+
 impl<'a> FileCtx<'a> {
+    /// Is `t` a bare generic type parameter of the current scope (`T`)?
+    pub fn is_param_rty(&self, t: &Type) -> bool {
+        match strip_ref(t) {
+            Type::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].arguments.is_empty() => self.ts.params.contains_key(&p.path.segments[0].ident.to_string()),
+            _ => false,
+        }
+    }
+
     /// Lower a type in value position (fields, `var` annotations, generic args).
     pub fn lower_type(&mut self, ty: &Type) -> LResult<MType> {
         match ty {
@@ -195,6 +258,9 @@ impl<'a> FileCtx<'a> {
                 return Ok(MType::named(m.clone()));
             }
             if name == "Self" {
+                if let Some(t) = &self.ts.self_concrete {
+                    return Ok(t.clone());
+                }
                 return Ok(MType::named("Self"));
             }
         }
@@ -295,7 +361,16 @@ impl<'a> FileCtx<'a> {
             }
             "PhantomData" => unsup("PhantomData (handled at field level)", tokens_str(whole)),
             "Result" => unsup("Result type outside a function return position", tokens_str(whole)),
-            "Mutex" | "RwLock" => unsup("lock type (no Mojo std equivalent)", tokens_str(whole)),
+            "Mutex" | "RwLock" | "ReentrantMutex" => {
+                // parking_lot / std / spin locks -> single-owner shim
+                let shim = if name == "RwLock" { "RwLock" } else { "Mutex" };
+                self.import("mojo_rt.sync", shim);
+                self.todo(
+                    "lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references)",
+                    format!("{} -> mojo_rt.sync.{}", tokens_str(whole), shim),
+                );
+                one(shim)
+            }
             "Pin" => unsup("Pin<T>", tokens_str(whole)),
             "SharedString" | "ArcStr" => {
                 // gpui's immutable shared string. Lower to String (owned copy).
@@ -303,6 +378,14 @@ impl<'a> FileCtx<'a> {
                 Ok(MType::named("String"))
             }
             _ => {
+                if let Some(os) = self.syms.origin_params.get(&name) {
+                    // struct with borrowed-reference fields: origin parameters are
+                    // left unbound at use sites (`Foo[_, T]`)
+                    let own = self.ts.self_name.as_deref() == Some(name.as_str());
+                    let mut a: Vec<MTypeArg> = os.iter().map(|o| MTypeArg::Type(if own { MType::named(format!("Self.origin_{}", o)) } else { MType::Infer })).collect();
+                    a.extend(args);
+                    return Ok(MType::Named(name, a));
+                }
                 if self.syms.type_aliases.contains(&name) || self.syms.structs.contains_key(&name) || self.syms.enums.contains_key(&name) {
                     // user type
                 } else if segs.len() > 1 || !name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
@@ -316,8 +399,31 @@ impl<'a> FileCtx<'a> {
         }
     }
 
+    /// `Option<&T>` in argument/return position -> `Optional[T]` (a copy of the
+    /// referent). Shared references are read-only, so only identity and cost
+    /// differ (and interior mutability seen through another path).
+    pub fn option_ref_type(&mut self, ty: &Type) -> Option<LResult<MType>> {
+        let Type::Path(p) = ty else { return None };
+        let seg = p.path.segments.last()?;
+        if seg.ident != "Option" || p.qself.is_some() {
+            return None;
+        }
+        let inner = rty_args(ty).into_iter().next()?;
+        let Type::Reference(r) = &inner else { return None };
+        if r.mutability.is_some() || matches!(&*r.elem, Type::TraitObject(_) | Type::Slice(_)) {
+            return None;
+        }
+        Some(self.lower_type(&r.elem).map(|t| {
+            self.todo("`Option<&T>` lowered to `Optional[T]` (copies the referent)", tokens_str(ty));
+            MType::generic("Optional", vec![t])
+        }))
+    }
+
     /// Lower an argument type: returns the convention and the value type.
     pub fn lower_arg_type(&mut self, ty: &Type, mutable_binding: bool) -> LResult<(Conv, MType)> {
+        if let Some(r) = self.option_ref_type(ty) {
+            return Ok((Conv::Default, r?));
+        }
         match ty {
             Type::Reference(r) => {
                 let inner = &*r.elem;
@@ -372,6 +478,12 @@ impl<'a> FileCtx<'a> {
                         }
                         continue;
                     }
+                    if names::op_trait(&n).is_some() && self_typed_op_bound(&n, last, owner) {
+                        // `T: Add<Output = T>`: operators on `T` are lowered to
+                        // `mojo_rt.ops` dispatch calls, which check the bound
+                        // when the generic is instantiated (see MAPPING.md 6.1).
+                        continue;
+                    }
                     if names::op_trait(&n).is_some() || ["Sum", "Product", "Into", "From", "AsRef", "Borrow", "Neg", "Zero", "One"].contains(&n.as_str()) {
                         self.todo(
                             format!("dropped bound `{}` (no Mojo std trait)", n),
@@ -416,15 +528,16 @@ impl<'a> FileCtx<'a> {
     pub fn fn_sugar_type(&mut self, seg: &syn::PathSegment) -> LResult<String> {
         if let PathArguments::Parenthesized(p) = &seg.arguments {
             let mut args = vec![];
+            let mut muts = vec![];
             for i in &p.inputs {
                 if let Type::Reference(r) = i {
-                    // `&T` argument == Mojo's default (immutable borrow) convention
-                    if r.mutability.is_some() {
-                        return unsup("closure taking a `&mut` argument", tokens_str(seg));
-                    }
+                    // `&T` argument == Mojo's default (immutable borrow) convention;
+                    // `&mut T` == a `mut` argument (`def(mut Bencher) -> None`)
+                    muts.push(r.mutability.is_some());
                     args.push(self.lower_type(&r.elem)?);
                     continue;
                 }
+                muts.push(false);
                 args.push(self.lower_type(i)?);
             }
             let ret = match &p.output {
@@ -438,6 +551,11 @@ impl<'a> FileCtx<'a> {
             };
             if seg.ident == "FnMut" {
                 self.todo("FnMut closure parameter", "Mojo closures mutate captures via `{mut x}` capture lists; verify");
+            }
+            if muts.iter().any(|m| *m) {
+                let a: Vec<String> = args.iter().zip(&muts).map(|(t, m)| format!("{}{}", if *m { "mut " } else { "" }, crate::printer::type_str(t))).collect();
+                let r = ret.map(|r| format!(" -> {}", crate::printer::type_str(&r))).unwrap_or_default();
+                return Ok(format!("def({}){}", a.join(", "), r));
             }
             return Ok(crate::printer::type_str(&MType::Func(args, ret)));
         }
