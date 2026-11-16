@@ -10,7 +10,7 @@ env:
 
 jobs:
   goldens:
-    name: goldens + mojo_rt (Mojo ${{ env.MOJO_VERSION }})
+    name: goldens + mojo_rt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
