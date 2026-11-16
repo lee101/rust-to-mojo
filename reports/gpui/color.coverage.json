@@ -3,25 +3,20 @@
   "mojo_target": "Mojo 1.0 (Modular 26.5, Aug 2026): def-only functions, comptime, Deinitable, Array, std.* imports",
   "crate_name": "color",
   "counts": {
-    "total": 75,
-    "translated": 40,
+    "total": 77,
+    "translated": 42,
     "partial": 11,
     "stubbed": 23,
     "skipped": 1
   },
-  "emitted_pct": 68.91891891891892,
-  "clean_pct": 54.054054054054056,
+  "emitted_pct": 69.73684210526316,
+  "clean_pct": 55.26315789473684,
   "internal_errors": 0,
   "stub_reasons": [
     {
       "key": "impl of external trait `JsonSchema`",
       "count": 4,
       "example": "JsonSchema for Rgba"
-    },
-    {
-      "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
-      "count": 2,
-      "example": "Hsla"
     },
     {
       "key": "impl of external trait `Deserialize`",
@@ -52,6 +47,16 @@
       "key": "`.into()` without a known target type",
       "count": 1,
       "example": "from.into()"
+    },
+    {
+      "key": "`impl Trait` return type",
+      "count": 1,
+      "example": "impl Strategy<Value = Self>"
+    },
+    {
+      "key": "impl of external trait `Arbitrary`",
+      "count": 1,
+      "example": "Arbitrary for Hsla"
     },
     {
       "key": "impl of std trait `Hash` (no Mojo mapping yet)",
@@ -154,10 +159,10 @@
       "output": "color/__init__.mojo",
       "module": "color",
       "counts": {
-        "total": 73,
-        "translated": 40,
+        "total": 77,
+        "translated": 42,
         "partial": 11,
-        "stubbed": 21,
+        "stubbed": 23,
         "skipped": 1
       },
       "parse_error": null,
@@ -392,6 +397,30 @@
         },
         {
           "kind": "method",
+          "name": "Hsla.opaque_strategy (from color.rs#mod property)",
+          "line": 354,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "`impl Trait` return type",
+              "detail": "impl Strategy<Value = Self>"
+            }
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Hsla.arbitrary_with (from color.rs#mod property)",
+          "line": 366,
+          "status": "stubbed",
+          "reasons": [
+            {
+              "key": "impl of external trait `Arbitrary`",
+              "detail": "Arbitrary for Hsla"
+            }
+          ]
+        },
+        {
+          "kind": "method",
           "name": "Hsla.eq",
           "line": 375,
           "status": "stubbed",
@@ -425,6 +454,13 @@
               "detail": "Ord for Hsla"
             }
           ]
+        },
+        {
+          "kind": "impl",
+          "name": "Eq for Hsla",
+          "line": 399,
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -765,6 +801,13 @@
           ]
         },
         {
+          "kind": "impl",
+          "name": "Eq for Background",
+          "line": 812,
+          "status": "translated",
+          "reasons": []
+        },
+        {
           "kind": "method",
           "name": "Background.default",
           "line": 814,
@@ -922,10 +965,10 @@
       "output": "color/property.mojo",
       "module": "color.property",
       "counts": {
-        "total": 2,
+        "total": 0,
         "translated": 0,
         "partial": 0,
-        "stubbed": 2,
+        "stubbed": 0,
         "skipped": 0
       },
       "parse_error": null,
@@ -935,32 +978,7 @@
           "detail": "proptest::prelude::*"
         }
       ],
-      "items": [
-        {
-          "kind": "method",
-          "name": "Hsla.opaque_strategy",
-          "line": 354,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
-              "detail": "Hsla"
-            }
-          ]
-        },
-        {
-          "kind": "method",
-          "name": "Hsla.arbitrary_with",
-          "line": 366,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "impl for a type defined in another module or not translated (Mojo needs methods inside the struct)",
-              "detail": "Arbitrary for Hsla"
-            }
-          ]
-        }
-      ]
+      "items": []
     }
   ]
 }

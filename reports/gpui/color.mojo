@@ -550,6 +550,30 @@ struct Hsla(ImplicitlyCopyable, Writable, Defaultable, Equatable):
     # }
     # --- end original Rust ---
 
+    # TODO(rust-to-mojo): method `Hsla.opaque_strategy` not translated: `impl Trait` return type (impl Strategy<Value = Self>)
+    # --- original Rust ---
+    # /// Proptest [`Strategy`] that produces opaque colors (i.e. alpha = 1).
+    # ///
+    # /// For truly arbitrary colors, use the [`Arbitrary`] implementation.
+    # pub fn opaque_strategy() -> impl Strategy<Value = Self> {
+    #     (0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0).prop_map(|(h, s, l)| Hsla { h, s, l, a: 1. })
+    # }
+    # --- end original Rust ---
+
+    # TODO(rust-to-mojo): impl `Arbitrary for Hsla` not translated: impl of external trait `Arbitrary`
+    # --- original Rust ---
+    # impl Arbitrary for Hsla {
+    #     type Strategy = BoxedStrategy<Self>;
+    #     type Parameters = ();
+    #
+    #     fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+    #         (0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0)
+    #             .prop_map(|(h, s, l, a)| Hsla { h, s, l, a })
+    #             .boxed()
+    #     }
+    # }
+    # --- end original Rust ---
+
 def hsla(h: Float32, s: Float32, l: Float32, a: Float32) -> Hsla:
     """Construct an [`Hsla`] object from plain values"""
     return Hsla(h=clamp(h, 0.0, 1.0), s=clamp(s, 0.0, 1.0), l=clamp(l, 0.0, 1.0), a=clamp(a, 0.0, 1.0))

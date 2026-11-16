@@ -11,7 +11,9 @@ between them.
 # TODO(rust-to-mojo): external crate `serde` has no Mojo port; dropped: use serde::Deserialize, serde::Deserializer, serde::Serialize, serde::Serializer, serde::de
 # TODO(rust-to-mojo): external crate `taffy` has no Mojo port; dropped: use taffy::prelude::TaffyGridLine, taffy::prelude::TaffyGridSpan
 
+from mojo_rt import ops
 from mojo_rt.num import F32_MAX, F32_MIN, F32_PI, rem, round_half_away, signum
+from mojo_rt.ops import RAdd, RMul, RMulF32, RNeg, RRem, RSub
 from mojo_rt.range import RustRange
 from std.math import ceil, floor, pow, sqrt
 from std.utils import Variant
@@ -62,19 +64,14 @@ trait Along:
         ...
 
 # TODO(rust-to-mojo): derive `Refineable` has no Mojo equivalent -- #[derive(Refineable)] dropped
-# TODO(rust-to-mojo): derive(Add) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
-# TODO(rust-to-mojo): derive(AddAssign) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
-# TODO(rust-to-mojo): derive(Sub) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
-# TODO(rust-to-mojo): derive(SubAssign) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
 # TODO(rust-to-mojo): derive `Serialize` has no Mojo equivalent -- #[derive(Serialize)] dropped
 # TODO(rust-to-mojo): derive `Deserialize` has no Mojo equivalent -- #[derive(Deserialize)] dropped
 # TODO(rust-to-mojo): derive `JsonSchema` has no Mojo equivalent -- #[derive(JsonSchema)] dropped
-# TODO(rust-to-mojo): derive(Neg) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
 # NOTE(rust-to-mojo): Rust repr(C) -- verify Mojo layout if this crosses FFI
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 # HINT(rust-to-mojo/opt:dtype-param): numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits
 @fieldwise_init
-struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), Writable, Defaultable, Along, IsZero where conforms_to(T, IsZero)):
+struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), Writable, Defaultable, RAdd, RSub, RNeg, Along, IsZero where conforms_to(T, IsZero)):
     """Describes a location in a 2D cartesian space.
 
     It holds two public fields, `x` and `y`, which represent the coordinates in the space.
@@ -94,21 +91,21 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
         self.y = Self.T()
 
     def __add__(self, rhs: Self) -> Self:
-        return Self(x=self.x + rhs.x, y=self.y + rhs.y)
+        return Self(x=ops.add(self.x, rhs.x), y=ops.add(self.y, rhs.y))
 
     def __iadd__(mut self, rhs: Self):
-        self.x += rhs.x
-        self.y += rhs.y
+        self.x = ops.add(self.x, rhs.x)
+        self.y = ops.add(self.y, rhs.y)
 
     def __sub__(self, rhs: Self) -> Self:
-        return Self(x=self.x - rhs.x, y=self.y - rhs.y)
+        return Self(x=ops.sub(self.x, rhs.x), y=ops.sub(self.y, rhs.y))
 
     def __isub__(mut self, rhs: Self):
-        self.x -= rhs.x
-        self.y -= rhs.y
+        self.x = ops.sub(self.x, rhs.x)
+        self.y = ops.sub(self.y, rhs.y)
 
     def __neg__(self) -> Self:
-        return Self(x=-self.x, y=-self.y)
+        return Self(x=ops.neg(self.x), y=ops.neg(self.y))
 
     @staticmethod
     def new(var x: Self.T, var y: Self.T) -> Self:
@@ -181,25 +178,20 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
         """
         return sqrt(Float64(self.x._0 ** 2 + self.y._0 ** 2))
 
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def relative_to(self, origin: Point[Self.T]) -> Point[Self.T]:
         """Get the position of this point, relative to the given origin"""
-        return point(self.x.copy() - origin.x.copy(), self.y.copy() - origin.y.copy())
+        return point(ops.sub(self.x.copy(), origin.x.copy()), ops.sub(self.y.copy(), origin.y.copy()))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<Rhs, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __mul__[Rhs: Copyable & Writable & Deinitable](self, var rhs: Rhs) -> Point[Self.T]:
-        return Point(x=self.x * rhs.copy(), y=self.y * rhs)
+        return Point(x=ops.mul_rhs(self.x, rhs.copy()), y=ops.mul_rhs(self.y, rhs))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __imul__[S: Copyable & Deinitable](mut self, var rhs: S):
-        self.x = self.x.copy() * rhs.copy()
-        self.y = self.y.copy() * rhs
+        self.x = ops.mul_rhs(self.x.copy(), rhs.copy())
+        self.y = ops.mul_rhs(self.y.copy(), rhs)
 
-    # TODO(rust-to-mojo): dropped bound `Div` (no Mojo std trait) -- `T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __truediv__[S: Copyable & Deinitable](self, var rhs: S) -> Self:
-        return Self(x=self.x / rhs.copy(), y=self.y / rhs)
+        return Self(x=ops.div_rhs(self.x, rhs.copy()), y=ops.div_rhs(self.y, rhs))
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def max(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Returns a new point with the maximum values of each dimension from `self` and `other`.
 
@@ -213,7 +205,6 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
         """
         return Point(x=self.x.copy() if self.x > other.x else other.x.copy(), y=self.y.copy() if self.y > other.y else other.y.copy())
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def min(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Returns a new point with the minimum values of each dimension from `self` and `other`.
 
@@ -227,7 +218,6 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
         """
         return Point(x=self.x.copy() if self.x <= other.x else other.x.copy(), y=self.y.copy() if self.y <= other.y else other.y.copy())
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def clamp(self, min: Self, max: Self) -> Self where conforms_to(Self.T, Comparable):
         """Clamps the point to a specified range.
 
@@ -257,7 +247,6 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
     def from_(size: Size[Self.T]) -> Self:
         return Self(x=size.width, y=size.height)
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: IsZero
     def is_zero(self) -> Bool where conforms_to(Self.T, IsZero):
         return self.x.is_zero() and self.y.is_zero()
 
@@ -279,17 +268,13 @@ def point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](var x: 
     """
     return Point(x=x^, y=y^)
 
-# TODO(rust-to-mojo): derive(Add) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
 # TODO(rust-to-mojo): derive `Deserialize` has no Mojo equivalent -- #[derive(Deserialize)] dropped
-# TODO(rust-to-mojo): derive(Div) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
-# TODO(rust-to-mojo): derive(Neg) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
 # TODO(rust-to-mojo): derive `Refineable` has no Mojo equivalent -- #[derive(Refineable)] dropped
 # TODO(rust-to-mojo): derive `Serialize` has no Mojo equivalent -- #[derive(Serialize)] dropped
-# TODO(rust-to-mojo): derive(Sub) on generic struct needs the parameter to support the operator -- no Mojo std trait for arithmetic; consider DType parameterisation
 # NOTE(rust-to-mojo): Rust repr(C) -- verify Mojo layout if this crosses FFI
 # HINT(rust-to-mojo/opt:dtype-param): numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits
 @fieldwise_init
-struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), Defaultable, Along, Writable, IsZero where conforms_to(T, IsZero)):
+struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), RAdd, Defaultable, RNeg, RSub, Along, Writable, IsZero where conforms_to(T, IsZero)):
     """A structure representing a two-dimensional size with width and height in a given unit.
 
     This struct is generic over the type `T`, which can be any type that implements `Clone`, `Default`, and `Debug`.
@@ -301,20 +286,20 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
     var height: Self.T
 
     def __add__(self, rhs: Self) -> Self:
-        return Self(width=self.width + rhs.width, height=self.height + rhs.height)
+        return Self(width=ops.add(self.width, rhs.width), height=ops.add(self.height, rhs.height))
 
     def __init__(out self):
         self.width = Self.T()
         self.height = Self.T()
 
     def __truediv__(self, rhs: Self.T) -> Self:
-        return Self(width=self.width / rhs, height=self.height / rhs)
+        return Self(width=ops.div(self.width, rhs), height=ops.div(self.height, rhs))
 
     def __neg__(self) -> Self:
-        return Self(width=-self.width, height=-self.height)
+        return Self(width=ops.neg(self.width), height=ops.neg(self.height))
 
     def __sub__(self, rhs: Self) -> Self:
-        return Self(width=self.width - rhs.width, height=self.height - rhs.height)
+        return Self(width=ops.sub(self.width, rhs.width), height=ops.sub(self.height, rhs.height))
 
     @staticmethod
     def new(var width: Self.T, var height: Self.T) -> Self:
@@ -338,7 +323,6 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
         """
         return Size(width=f(self.width.copy()), height=f(self.height.copy()))
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Compute the center point of the size.g"""
         return Point(x=self.width.half(), y=self.height.half())
@@ -376,7 +360,6 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
         else:
             return Size(width=self.width.copy(), height=f(self.height.copy()))
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def max(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Returns a new `Size` with the maximum width and height from `self` and `other`.
 
@@ -390,7 +373,6 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
         """
         return Size(width=self.width.copy() if self.width >= other.width else other.width.copy(), height=self.height.copy() if self.height >= other.height else other.height.copy())
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def min(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Returns a new `Size` with the minimum width and height from `self` and `other`.
 
@@ -406,12 +388,11 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
 
     # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation
     def __mul__[Rhs: Copyable & Writable & Defaultable & Equatable & Deinitable](self, var rhs: Rhs) -> Size[Rhs]:
-        return Size(width=self.width * rhs.copy(), height=self.height * rhs)
+        return Size(width=ops.mul_rhs(self.width, rhs.copy()), height=ops.mul_rhs(self.height, rhs))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __imul__[S: Copyable & Deinitable](mut self, var rhs: S):
-        self.width = self.width.copy() * rhs.copy()
-        self.height = self.height.copy() * rhs
+        self.width = ops.mul_rhs(self.width.copy(), rhs.copy())
+        self.height = ops.mul_rhs(self.height.copy(), rhs)
 
     # TODO(rust-to-mojo): `{:?}` Debug formatting lowered to repr() (output format differs) -- Size {{ {:?} × {:?} }}
     def write_repr_to[W: Writer](self, mut writer: W):
@@ -492,7 +473,6 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
         """Converts the size from logical to physical pixels."""
         return size(DevicePixels(Int32(round_half_away(self.width._0 * scale_factor))), DevicePixels(Int32(round_half_away(self.height._0 * scale_factor))))
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: IsZero
     def is_zero(self) -> Bool where conforms_to(Self.T, IsZero):
         return self.width.is_zero() or self.height.is_zero()
 
@@ -536,7 +516,7 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         self.origin = Point[Self.T]()
         self.size = Size[Self.T]()
 
-    # TODO(rust-to-mojo): method `Bounds.centered` not translated: closure with untyped parameters (needs type inference) (| id | cx.find_display(id))
+    # TODO(rust-to-mojo): method `Bounds.centered` not translated: closure without a return type annotation (needs type inference) (| id | cx.find_display(id))
     # signature hint: def centered(var display_id: Optional[DisplayId], size: Size[Pixels], cx: App) -> Self
     # --- original Rust ---
     # /// Generate a centered bounds for the given display or primary display if none is provided
@@ -557,7 +537,7 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
     # }
     # --- end original Rust ---
 
-    # TODO(rust-to-mojo): method `Bounds.maximized` not translated: closure with untyped parameters (needs type inference) (| id | cx.find_display(id))
+    # TODO(rust-to-mojo): method `Bounds.maximized` not translated: closure without a return type annotation (needs type inference) (| id | cx.find_display(id))
     # signature hint: def maximized(var display_id: Optional[DisplayId], cx: App) -> Self
     # --- original Rust ---
     # /// Generate maximized bounds for the given display or primary display if none is provided
@@ -590,7 +570,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return Bounds(origin=origin, size=size)
 
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
     @staticmethod
     def from_corners(top_left: Point[Self.T], bottom_right: Point[Self.T]) -> Self:
         """Constructs a `Bounds` from two corner points: the top left and bottom right corners.
@@ -613,54 +592,40 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         (Rust code examples omitted by rust-to-mojo.)
         """
         var origin = Point(x=top_left.x.copy(), y=top_left.y.copy())
-        var size = Size(width=bottom_right.x - top_left.x, height=bottom_right.y - top_left.y)
+        var size = Size(width=ops.sub(bottom_right.x, top_left.x), height=ops.sub(bottom_right.y, top_left.y))
         return Bounds(origin=origin, size=size)
 
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     # HINT(rust-to-mojo/opt:simd-pack): straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise
     @staticmethod
     def from_anchor_and_size(corner: Anchor, origin: Point[Self.T], size: Size[Self.T]) -> Bounds[Self.T] where conforms_to(Self.T, Half):
         """Constructs a `Bounds` from a corner point and size. The specified corner will be placed at
         the specified origin.
         """
-        var origin_1 = origin if corner == Anchor.TopLeft else Point(x=origin.x - size.width.copy(), y=origin.y) if corner == Anchor.TopRight else Point(x=origin.x, y=origin.y - size.height.copy()) if corner == Anchor.BottomLeft else Point(x=origin.x - size.width.copy(), y=origin.y - size.height.copy()) if corner == Anchor.BottomRight else Point(x=origin.x - size.width.half(), y=origin.y) if corner == Anchor.TopCenter else Point(x=origin.x - size.width.half(), y=origin.y - size.height.copy()) if corner == Anchor.BottomCenter else Point(x=origin.x, y=origin.y - size.height.half()) if corner == Anchor.LeftCenter else Point(x=origin.x - size.width.copy(), y=origin.y - size.height.half())
+        var origin_1 = origin if corner == Anchor.TopLeft else Point(x=ops.sub(origin.x, size.width.copy()), y=origin.y) if corner == Anchor.TopRight else Point(x=origin.x, y=ops.sub(origin.y, size.height.copy())) if corner == Anchor.BottomLeft else Point(x=ops.sub(origin.x, size.width.copy()), y=ops.sub(origin.y, size.height.copy())) if corner == Anchor.BottomRight else Point(x=ops.sub(origin.x, size.width.half()), y=origin.y) if corner == Anchor.TopCenter else Point(x=ops.sub(origin.x, size.width.half()), y=ops.sub(origin.y, size.height.copy())) if corner == Anchor.BottomCenter else Point(x=origin.x, y=ops.sub(origin.y, size.height.half())) if corner == Anchor.LeftCenter else Point(x=ops.sub(origin.x, size.width.copy()), y=ops.sub(origin.y, size.height.half()))
         return Bounds(origin=origin_1, size=size)
 
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     @staticmethod
     def centered_at(center: Point[Self.T], size: Size[Self.T]) -> Self where conforms_to(Self.T, Half):
         """Creates a new bounds centered at the given point."""
-        var origin = Point(x=center.x - size.width.half(), y=center.y - size.height.half())
+        var origin = Point(x=ops.sub(center.x, size.width.half()), y=ops.sub(center.y, size.height.half()))
         return Self.new(origin, size)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def top_center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the top center point of the bounds."""
-        return Point(x=self.origin.x.copy() + self.size.width.half(), y=self.origin.y.copy())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.half()), y=self.origin.y.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def bottom_center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the bottom center point of the bounds."""
-        return Point(x=self.origin.x.copy() + self.size.width.half(), y=self.origin.y.copy() + self.size.height.copy())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.half()), y=ops.add(self.origin.y.copy(), self.size.height.copy()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def left_center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the left center point of the bounds."""
-        return Point(x=self.origin.x.copy(), y=self.origin.y.copy() + self.size.height.half())
+        return Point(x=self.origin.x.copy(), y=ops.add(self.origin.y.copy(), self.size.height.half()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def right_center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the right center point of the bounds."""
-        return Point(x=self.origin.x.copy() + self.size.width.copy(), y=self.origin.y.copy() + self.size.height.half())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.copy()), y=ops.add(self.origin.y.copy(), self.size.height.half()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def intersects(self, other: Bounds[Self.T]) -> Bool where conforms_to(Self.T, Comparable):
         """Checks if this `Bounds` intersects with another `Bounds`.
 
@@ -683,8 +648,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         var their_lower_right = other.bottom_right()
         return self.origin.x < their_lower_right.x and my_lower_right.x > other.origin.x and self.origin.y < their_lower_right.y and my_lower_right.y > other.origin.y
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def center(self) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the center point of the bounds.
 
@@ -700,9 +663,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return Point(x=self.origin.x.copy() + self.size.width.copy().half(), y=self.origin.y.copy() + self.size.height.copy().half())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.copy().half()), y=ops.add(self.origin.y.copy(), self.size.height.copy().half()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def half_perimeter(self) -> Self.T:
         """Calculates the half perimeter of a rectangle defined by the bounds.
 
@@ -715,10 +677,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return self.size.width.copy() + self.size.height.copy()
+        return ops.add(self.size.width.copy(), self.size.height.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def dilate(self, var amount: Self.T) -> Bounds[Self.T]:
         """Dilates the bounds by a specified amount in all directions.
 
@@ -736,28 +696,20 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        var double_amount = amount.copy() + amount.copy()
+        var double_amount = ops.add(amount.copy(), amount.copy())
         return Bounds(origin=self.origin.copy() - point(amount.copy(), amount), size=self.size.copy() + size(double_amount.copy(), double_amount))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def extend(self, amount: Edges[Self.T]) -> Bounds[Self.T]:
         """Extends the bounds different amounts in each direction."""
-        return Bounds(origin=self.origin.copy() - point(amount.left.copy(), amount.top.copy()), size=self.size.copy() + size(amount.left.copy() + amount.right.copy(), amount.top.copy() + amount.bottom))
+        return Bounds(origin=self.origin.copy() - point(amount.left.copy(), amount.top.copy()), size=self.size.copy() + size(ops.add(amount.left.copy(), amount.right.copy()), ops.add(amount.top.copy(), amount.bottom)))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Neg` (no Mojo std trait) -- `T: Neg<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def inset(self, var amount: Self.T) -> Self:
         """Inset the bounds by a specified amount. Equivalent to `dilate` with the amount negated.
 
         Note that this may panic if T does not support negative values.
         """
-        return self.dilate(-amount)
+        return self.dilate(ops.neg(amount))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def intersect(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Calculates the intersection of two `Bounds` objects.
 
@@ -781,9 +733,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         var bottom_right = self.bottom_right().min(other.bottom_right()).max(upper_left)
         return Self.from_corners(upper_left, bottom_right)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def union(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Computes the union of two `Bounds`.
 
@@ -807,9 +756,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         var bottom_right = self.bottom_right().max(other.bottom_right())
         return Bounds.from_corners(top_left^, bottom_right)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def join(self, other: Self) -> Self where conforms_to(Self.T, Comparable):
         """Computes the smallest `Bounds` that covers the area of both `Bounds`.
 
@@ -827,34 +773,33 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         else:
             return self.union(other)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def space_within(self, outer: Self) -> Edges[Self.T]:
         """Computes the space available within outer bounds."""
         return Edges(top=self.top() - outer.top(), right=outer.right() - self.right(), bottom=outer.bottom() - self.bottom(), left=self.left() - outer.left())
 
     # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.origin * rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.size * rhs`: mojo_rt.ops only covers `Output = Self` operators
     def __mul__[Rhs: Copyable & Writable & Defaultable & Equatable & Deinitable](self, var rhs: Rhs) -> Bounds[Rhs]:
         return Bounds(origin=self.origin * rhs.copy(), size=self.size * rhs)
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.origin * rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.size * rhs`: mojo_rt.ops only covers `Output = Self` operators
     def __imul__[S: Copyable & Deinitable](mut self, var rhs: S):
         self.origin *= rhs.copy()
         self.size *= rhs
 
-    # TODO(rust-to-mojo): dropped bound `Div` (no Mojo std trait) -- `T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.origin / rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators
+    # TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `self.size / rhs`: mojo_rt.ops only covers `Output = Self` operators
     def __truediv__[S: Copyable & Deinitable](self, var rhs: S) -> Self:
         return Self(origin=self.origin / rhs.copy(), size=self.size / rhs)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __add__(self, rhs: Point[Self.T]) -> Self:
         return Self(origin=self.origin + rhs, size=self.size)
 
-    # TODO(rust-to-mojo): dropped bound `Sub` (no Mojo std trait) -- `T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __sub__(self, rhs: Point[Self.T]) -> Self:
         return Self(origin=self.origin - rhs, size=self.size)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def top(self) -> Self.T:
         """Returns the top edge of the bounds.
 
@@ -864,7 +809,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return self.origin.y.copy()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def bottom(self) -> Self.T:
         """Returns the bottom edge of the bounds.
 
@@ -872,9 +816,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         A value of type `T` representing the y-coordinate of the bottom edge of the bounds.
         """
-        return self.origin.y.copy() + self.size.height.copy()
+        return ops.add(self.origin.y.copy(), self.size.height.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def left(self) -> Self.T:
         """Returns the left edge of the bounds.
 
@@ -884,7 +827,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return self.origin.x.copy()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def right(self) -> Self.T:
         """Returns the right edge of the bounds.
 
@@ -892,9 +834,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         A value of type `T` representing the x-coordinate of the right edge of the bounds.
         """
-        return self.origin.x.copy() + self.size.width.copy()
+        return ops.add(self.origin.x.copy(), self.size.width.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def top_right(self) -> Point[Self.T]:
         """Returns the top right corner point of the bounds.
 
@@ -906,9 +847,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return Point(x=self.origin.x.copy() + self.size.width.copy(), y=self.origin.y.copy())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.copy()), y=self.origin.y.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def bottom_right(self) -> Point[Self.T]:
         """Returns the bottom right corner point of the bounds.
 
@@ -920,9 +860,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return Point(x=self.origin.x.copy() + self.size.width.copy(), y=self.origin.y.copy() + self.size.height.copy())
+        return Point(x=ops.add(self.origin.x.copy(), self.size.width.copy()), y=ops.add(self.origin.y.copy(), self.size.height.copy()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def bottom_left(self) -> Point[Self.T]:
         """Returns the bottom left corner point of the bounds.
 
@@ -934,10 +873,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return Point(x=self.origin.x.copy(), y=self.origin.y.copy() + self.size.height.copy())
+        return Point(x=self.origin.x.copy(), y=ops.add(self.origin.y.copy(), self.size.height.copy()))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def corner(self, corner: Anchor) -> Point[Self.T] where conforms_to(Self.T, Half):
         """Returns the requested corner point of the bounds.
 
@@ -966,8 +903,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         else:
             return self.right_center()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def contains(self, point: Point[Self.T]) -> Bool where conforms_to(Self.T, Comparable):
         """Checks if the given point is within the bounds.
 
@@ -988,10 +923,8 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
 
         (Rust code examples omitted by rust-to-mojo.)
         """
-        return point.x >= self.origin.x and point.x < self.origin.x.copy() + self.size.width.copy() and point.y >= self.origin.y and point.y < self.origin.y.copy() + self.size.height.copy()
+        return point.x >= self.origin.x and point.x < ops.add(self.origin.x.copy(), self.size.width.copy()) and point.y >= self.origin.y and point.y < ops.add(self.origin.y.copy(), self.size.height.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def is_contained_within(self, other: Self) -> Bool where conforms_to(Self.T, Comparable):
         """Checks if this bounds is completely contained within another bounds.
 
@@ -1013,8 +946,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return other.contains(self.origin) and other.contains(self.bottom_right())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def map[U: Copyable & Writable & Defaultable & Equatable & Deinitable, F1: def(Self.T) -> U](self, f: F1) -> Bounds[U] where conforms_to(Self.T, Comparable):
         """Applies a function to the origin and size of the bounds, producing a new `Bounds<U>`.
 
@@ -1036,8 +967,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return Bounds(origin=self.origin.map(f), size=self.size.map(f))
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def map_origin[F1: def(Self.T) -> Self.T](self, f: F1) -> Bounds[Self.T] where conforms_to(Self.T, Comparable):
         """Applies a function to the origin  of the bounds, producing a new `Bounds` with the new origin
 
@@ -1047,8 +976,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return Bounds(origin=self.origin.map(f), size=self.size)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def map_size[F1: def(Self.T) -> Self.T](self, f: F1) -> Bounds[Self.T] where conforms_to(Self.T, Comparable):
         """Applies a function to the origin  of the bounds, producing a new `Bounds` with the new origin
 
@@ -1068,7 +995,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
     # }
     # --- end original Rust ---
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def is_empty(self) -> Bool where conforms_to(Self.T, Comparable):
         """Checks if the bounds represent an empty area.
 
@@ -1078,7 +1004,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """
         return self.size.width <= Self.T() or self.size.height <= Self.T()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def write_to[W: Writer](self, mut writer: W):
         writer.write(self.origin, " - ", self.bottom_right(), " (size ", self.size, ")")
 
@@ -1117,7 +1042,6 @@ struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Imp
         """Convert the bounds from physical pixels to logical pixels"""
         return Bounds(origin=point(px(Float32(self.origin.x._0) / scale_factor), px(Float32(self.origin.y._0) / scale_factor)), size=self.size.to_pixels(scale_factor))
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: IsZero
     def is_zero(self) -> Bool where conforms_to(Self.T, IsZero):
         return self.size.is_zero()
 
@@ -1130,7 +1054,7 @@ def bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](origin
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 # HINT(rust-to-mojo/opt:dtype-param): numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits
 @fieldwise_init
-struct Edges[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, Equatable, Writable, Defaultable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Along):
+struct Edges[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, Equatable, Writable, Defaultable, RAdd, RMul, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Along):
     """Represents the edges of a box in a 2D space, such as padding or margin.
 
     Each field represents the size of the edge on one side of the box: `top`, `right`, `bottom`, and `left`.
@@ -1154,20 +1078,17 @@ struct Edges[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copy
         self.bottom = Self.T()
         self.left = Self.T()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __add__(self, rhs: Self) -> Self:
-        return Self(top=self.top + rhs.top, right=self.right + rhs.right, bottom=self.bottom + rhs.bottom, left=self.left + rhs.left)
+        return Self(top=ops.add(self.top, rhs.top), right=ops.add(self.right, rhs.right), bottom=ops.add(self.bottom, rhs.bottom), left=ops.add(self.left, rhs.left))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __mul__(self, rhs: Self) -> Self:
-        return Self(top=self.top * rhs.top, right=self.right * rhs.right, bottom=self.bottom * rhs.bottom, left=self.left * rhs.left)
+        return Self(top=ops.mul(self.top, rhs.top), right=ops.mul(self.right, rhs.right), bottom=ops.mul(self.bottom, rhs.bottom), left=ops.mul(self.left, rhs.left))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __imul__[S: Copyable & Deinitable](mut self, var rhs: S):
-        self.top = self.top.copy() * rhs.copy()
-        self.right = self.right.copy() * rhs.copy()
-        self.bottom = self.bottom.copy() * rhs.copy()
-        self.left = self.left.copy() * rhs
+        self.top = ops.mul_rhs(self.top.copy(), rhs.copy())
+        self.right = ops.mul_rhs(self.right.copy(), rhs.copy())
+        self.bottom = ops.mul_rhs(self.bottom.copy(), rhs.copy())
+        self.left = ops.mul_rhs(self.left.copy(), rhs)
 
     @staticmethod
     def all(var value: Self.T) -> Self:
@@ -1419,14 +1340,12 @@ struct Edges[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copy
 
     comptime Unit = Self.T
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def along(self, axis: Axis) -> Self.T:
         if axis == Axis.Horizontal:
-            return self.left.copy() + self.right.copy()
+            return ops.add(self.left.copy(), self.right.copy())
         else:
-            return self.top.copy() + self.bottom.copy()
+            return ops.add(self.top.copy(), self.bottom.copy())
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def apply_along[F1: def(Self.T) -> Self.T](self, axis: Axis, f: F1) -> Self:
         if axis == Axis.Horizontal:
             return Edges(top=self.top.copy(), bottom=self.bottom.copy(), right=f(self.right.copy()), left=f(self.left.copy()))
@@ -1571,7 +1490,7 @@ struct Anchor(ImplicitlyCopyable, Equatable, Intable, Writable):
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 # HINT(rust-to-mojo/opt:dtype-param): numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits
 @fieldwise_init
-struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, Equatable, Writable, Defaultable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), IsZero where conforms_to(T, IsZero)):
+struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, Equatable, Writable, Defaultable, RMul, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), IsZero where conforms_to(T, IsZero)):
     """Represents the corners of a box in a 2D space, such as border radius.
 
     Each field represents the size of the corner on one side of the box: `top_left`, `top_right`, `bottom_right`, and `bottom_left`.
@@ -1591,8 +1510,6 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
         self.bottom_right = Self.T()
         self.bottom_left = Self.T()
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     @staticmethod
     def all(var value: Self.T) -> Self where conforms_to(Self.T, Half):
         """Constructs `Corners` where all sides are set to the same specified value.
@@ -1615,8 +1532,6 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
         """
         return Self(top_left=value.copy(), top_right=value.copy(), bottom_right=value.copy(), bottom_left=value)
 
-    # TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Half
     def corner(self, corner: Anchor) -> Self.T where conforms_to(Self.T, Half):
         """Returns the requested corner value, supporting all eight corner positions.
 
@@ -1648,13 +1563,13 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
         elif corner == Anchor.BottomRight:
             return self.bottom_right.copy()
         elif corner == Anchor.TopCenter:
-            return (self.top_left.copy() + self.top_right.copy()).half()
+            return ops.add(self.top_left.copy(), self.top_right.copy()).half()
         elif corner == Anchor.BottomCenter:
-            return (self.bottom_left.copy() + self.bottom_right.copy()).half()
+            return ops.add(self.bottom_left.copy(), self.bottom_right.copy()).half()
         elif corner == Anchor.LeftCenter:
-            return (self.top_left.copy() + self.bottom_left.copy()).half()
+            return ops.add(self.top_left.copy(), self.bottom_left.copy()).half()
         else:
-            return (self.top_right.copy() + self.bottom_right.copy()).half()
+            return ops.add(self.top_right.copy(), self.bottom_right.copy()).half()
 
     # TODO(rust-to-mojo): impl specialised on a concrete type argument -- method gated with `where Self.T == AbsoluteLength`
     def to_pixels(self, rem_size: Pixels) -> Corners[Pixels] where Self.T == AbsoluteLength:
@@ -1704,8 +1619,6 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
         """
         return self.top_left.max(self.top_right).max(self.bottom_right).max(self.bottom_left)
 
-    # TODO(rust-to-mojo): dropped bound `Div` (no Mojo std trait) -- `T: Div<f32, Output = T>`: operators on generic params need a user trait or DType parameterisation
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: Comparable
     def clamp_radii_for_quad_size(self, size: Size[Self.T]) -> Corners[Self.T] where conforms_to(Self.T, Comparable):
         """Clamps corner radii to be less than or equal to half the shortest side of a quad.
 
@@ -1741,16 +1654,14 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
         """
         return Corners(top_left=f(self.top_left), top_right=f(self.top_right), bottom_right=f(self.bottom_right), bottom_left=f(self.bottom_left))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __mul__(self, rhs: Self) -> Self:
-        return Self(top_left=self.top_left.copy() * rhs.top_left, top_right=self.top_right.copy() * rhs.top_right, bottom_right=self.bottom_right.copy() * rhs.bottom_right, bottom_left=self.bottom_left * rhs.bottom_left)
+        return Self(top_left=ops.mul(self.top_left.copy(), rhs.top_left), top_right=ops.mul(self.top_right.copy(), rhs.top_right), bottom_right=ops.mul(self.bottom_right.copy(), rhs.bottom_right), bottom_left=ops.mul(self.bottom_left, rhs.bottom_left))
 
-    # TODO(rust-to-mojo): dropped bound `Mul` (no Mojo std trait) -- `T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation
     def __imul__[S: Copyable & Deinitable](mut self, var rhs: S):
-        self.top_left = self.top_left.copy() * rhs.copy()
-        self.top_right = self.top_right.copy() * rhs.copy()
-        self.bottom_right = self.bottom_right.copy() * rhs.copy()
-        self.bottom_left = self.bottom_left.copy() * rhs
+        self.top_left = ops.mul_rhs(self.top_left.copy(), rhs.copy())
+        self.top_right = ops.mul_rhs(self.top_right.copy(), rhs.copy())
+        self.bottom_right = ops.mul_rhs(self.bottom_right.copy(), rhs.copy())
+        self.bottom_left = ops.mul_rhs(self.bottom_left.copy(), rhs)
 
     # TODO(rust-to-mojo): method `Corners.from` not translated: `.into()` without a known target type (val.into())
     # signature hint: def from_(val: Float32) -> Self
@@ -1770,7 +1681,6 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
     def from_(val: Pixels) -> Self where Self.T == Pixels:
         return Corners(top_left=val, top_right=val, bottom_right=val, bottom_left=val)
 
-    # TODO(rust-to-mojo): method gated on an extra trait bound (`where conforms_to`) -- Self.T: IsZero
     def is_zero(self) -> Bool where conforms_to(Self.T, IsZero):
         return self.top_left.is_zero() and self.top_right.is_zero() and self.bottom_right.is_zero() and self.bottom_left.is_zero()
 
@@ -1779,7 +1689,7 @@ struct Corners[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Co
 # NOTE(rust-to-mojo): Rust repr(transparent) -- verify Mojo layout if this crosses FFI
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Radians(ImplicitlyCopyable, Equatable, Writable, Defaultable):
+struct Radians(ImplicitlyCopyable, Equatable, Writable, Defaultable, RAdd, RSub, RNeg):
     """Represents an angle in Radians"""
     var _0: Float32
 
@@ -1820,7 +1730,7 @@ def radians(value: Float32) -> Radians:
 # NOTE(rust-to-mojo): Rust repr(transparent) -- verify Mojo layout if this crosses FFI
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Percentage(ImplicitlyCopyable, Equatable, Writable, Defaultable):
+struct Percentage(ImplicitlyCopyable, Equatable, Writable, Defaultable, RAdd, RSub, RNeg):
     """A type representing a percentage value."""
     var _0: Float32
 
@@ -1858,7 +1768,7 @@ def percentage(value: Float32) -> Percentage:
 # TODO(rust-to-mojo): derive `JsonSchema` has no Mojo equivalent -- #[derive(JsonSchema)] dropped
 # NOTE(rust-to-mojo): Rust repr(transparent) -- verify Mojo layout if this crosses FFI
 @fieldwise_init
-struct Pixels(ImplicitlyCopyable, Equatable, Defaultable, Writable, Half, IsZero):
+struct Pixels(ImplicitlyCopyable, Equatable, Defaultable, RAdd, RSub, RNeg, RRem, RMulF32, Writable, Half, IsZero):
     """Represents a length in pixels, the base unit of measurement in the UI framework.
 
     `Pixels` is a value type that represents an absolute length in pixels, which is used
@@ -2156,7 +2066,7 @@ struct Pixels(ImplicitlyCopyable, Equatable, Defaultable, Writable, Half, IsZero
 # TODO(rust-to-mojo): derive `Deserialize` has no Mojo equivalent -- #[derive(Deserialize)] dropped
 # NOTE(rust-to-mojo): Rust repr(transparent) -- verify Mojo layout if this crosses FFI
 @fieldwise_init
-struct DevicePixels(ImplicitlyCopyable, Equatable, Hashable, Defaultable, Comparable, Writable, Half, IsZero):
+struct DevicePixels(ImplicitlyCopyable, Equatable, Hashable, RAdd, Defaultable, Comparable, RSub, Writable, Half, IsZero):
     """Represents physical pixels on the display.
 
     `DevicePixels` is a unit of measurement that refers to the actual pixels on a device's screen.
@@ -2287,7 +2197,7 @@ struct DevicePixels(ImplicitlyCopyable, Equatable, Hashable, Defaultable, Compar
 
 # NOTE(rust-to-mojo): Rust repr(transparent) -- verify Mojo layout if this crosses FFI
 @fieldwise_init
-struct ScaledPixels(ImplicitlyCopyable, Equatable, Defaultable, Writable, Half, IsZero):
+struct ScaledPixels(ImplicitlyCopyable, Equatable, Defaultable, RAdd, RSub, RNeg, Writable, RRem, RMulF32, Half, IsZero):
     """Represents scaled pixels that take into account the device's scale factor.
 
     `ScaledPixels` are used to ensure that UI elements appear at the correct size on devices
@@ -2446,7 +2356,7 @@ struct ScaledPixels(ImplicitlyCopyable, Equatable, Defaultable, Writable, Half, 
 # --- end original Rust ---
 
 @fieldwise_init
-struct Rems(ImplicitlyCopyable, Equatable, Defaultable, Writable, Half, IsZero):
+struct Rems(ImplicitlyCopyable, Equatable, Defaultable, RAdd, RSub, RNeg, Writable, Half, IsZero):
     """Represents a length in rems, a unit based on the font-size of the window, which can be assigned with [`Window::set_rem_size`][set_rem_size].
 
     Rems are used for defining lengths that are scalable and consistent across different UI elements.
@@ -2873,21 +2783,13 @@ struct DefiniteLength(Copyable, ImplicitlyCopyable, Equatable, Writable, Default
     # }
     # --- end original Rust ---
 
-    # TODO(rust-to-mojo): method `DefiniteLength.from` not translated: `.into()` without a known target type (pixels.into())
-    # signature hint: def from_(pixels: Pixels) -> Self
-    # --- original Rust ---
-    # fn from(pixels: Pixels) -> Self {
-    #     Self::Absolute(pixels.into())
-    # }
-    # --- end original Rust ---
+    @staticmethod
+    def from_(pixels: Pixels) -> Self:
+        return Self.Absolute(AbsoluteLength.from_(pixels))
 
-    # TODO(rust-to-mojo): method `DefiniteLength.from` not translated: `.into()` without a known target type (rems.into())
-    # signature hint: def from_(rems: Rems) -> Self
-    # --- original Rust ---
-    # fn from(rems: Rems) -> Self {
-    #     Self::Absolute(rems.into())
-    # }
-    # --- end original Rust ---
+    @staticmethod
+    def from_(rems: Rems) -> Self:
+        return Self.Absolute(AbsoluteLength.from_(rems))
 
     @staticmethod
     def from_(length: AbsoluteLength) -> Self:
@@ -3023,33 +2925,21 @@ struct Length(Copyable, ImplicitlyCopyable, Equatable, Writable, Defaultable, Is
     # }
     # --- end original Rust ---
 
-    # TODO(rust-to-mojo): method `Length.from` not translated: `.into()` without a known target type (pixels.into())
-    # signature hint: def from_(pixels: Pixels) -> Self
-    # --- original Rust ---
-    # fn from(pixels: Pixels) -> Self {
-    #     Self::Definite(pixels.into())
-    # }
-    # --- end original Rust ---
+    @staticmethod
+    def from_(pixels: Pixels) -> Self:
+        return Self.Definite(DefiniteLength.from_(pixels))
 
-    # TODO(rust-to-mojo): method `Length.from` not translated: `.into()` without a known target type (rems.into())
-    # signature hint: def from_(rems: Rems) -> Self
-    # --- original Rust ---
-    # fn from(rems: Rems) -> Self {
-    #     Self::Definite(rems.into())
-    # }
-    # --- end original Rust ---
+    @staticmethod
+    def from_(rems: Rems) -> Self:
+        return Self.Definite(DefiniteLength.from_(rems))
 
     @staticmethod
     def from_(length: DefiniteLength) -> Self:
         return Self.Definite(length)
 
-    # TODO(rust-to-mojo): method `Length.from` not translated: `.into()` without a known target type (length.into())
-    # signature hint: def from_(length: AbsoluteLength) -> Self
-    # --- original Rust ---
-    # fn from(length: AbsoluteLength) -> Self {
-    #     Self::Definite(length.into())
-    # }
-    # --- end original Rust ---
+    @staticmethod
+    def from_(length: AbsoluteLength) -> Self:
+        return Self.Definite(DefiniteLength.from_(length))
 
     @staticmethod
     def default() -> Self:
@@ -3241,23 +3131,13 @@ trait Half:
         """
         ...
 
-# TODO(rust-to-mojo): impl `Half for i32` not translated: impl on a std/primitive type (Mojo has no extensions)
-# --- original Rust ---
-# impl Half for i32 {
-#     fn half(&self) -> Self {
-#         self / 2
-#     }
-# }
-# --- end original Rust ---
+# TODO(rust-to-mojo): extension impl lowered to a free function (Mojo has no extensions) -- impl Half for i32 -> Half_i32_half(self, ...); method-syntax call sites are not rewritten
+def Half_i32_half(self: Int32) -> Int32:
+    return self / 2
 
-# TODO(rust-to-mojo): impl `Half for f32` not translated: impl on a std/primitive type (Mojo has no extensions)
-# --- original Rust ---
-# impl Half for f32 {
-#     fn half(&self) -> Self {
-#         self / 2.
-#     }
-# }
-# --- end original Rust ---
+# TODO(rust-to-mojo): extension impl lowered to a free function (Mojo has no extensions) -- impl Half for f32 -> Half_f32_half(self, ...); method-syntax call sites are not rewritten
+def Half_f32_half(self: Float32) -> Float32:
+    return self / 2.0
 
 trait IsZero:
     """A trait for checking if a value is zero.

@@ -127,3 +127,22 @@ impls, and specialisation. The emitted bodies keep Rust semantics where it matte
 including `%`, rounding, NaN handling, and float casts. What blocks compilation is
 item 1 (generic arithmetic), plus the unverified 1.0 syntax points listed in
 MAPPING.md. Both are concentrated, well-labelled fix-ups rather than scattered errors.
+
+## Pass 2 update
+
+* **Item 1 (generic arithmetic) is addressed.** Operators on a value whose type is a generic
+  parameter now go through `mojo_rt.ops` (`ops.add(self.origin.x.copy(), self.size.width.copy())`),
+  which dispatches at compile time to the `R*` trait (translated `Pixels` etc. conform via
+  their `impl Add for Pixels`) or to the built-in scalar operator, so `Point[Float32]` and
+  `Point[Pixels]` both instantiate. `T: Mul<S, Output = T>` scaling uses `ops.mul_rhs`.
+  The design and the rejected alternatives (a plain trait bound; DType parameterisation)
+  are in MAPPING.md 6.1. Its unverified points are MAPPING.md items 13 and 14.
+* The `where conforms_to(Self.T, X)` gating no longer carries a TODO: the 1.0 manual
+  documents the form (`def sort() where conforms_to(Self.T, Comparable):`). Item 2 above
+  (refinement inside the body) is still open and listed as MAPPING.md item 14.
+* `impl Half for f32` / `for i32` become free functions `Half_f32_half(self: Float32)`, with
+  a TODO: call sites with method syntax are not rewritten.
+* Still open: the `.into()` targets that are generic (`size.width.into()` under `T`),
+  `Sum`/`TryFrom`/`PartialOrd`/`Ord`/`Hash` impls, and items 3–8.
+
+Coverage of `geometry.rs`: 80.0% emitted / 44.6% clean before, 82.8% / 67.6% after.

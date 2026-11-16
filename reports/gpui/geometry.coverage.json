@@ -3,24 +3,24 @@
   "mojo_target": "Mojo 1.0 (Modular 26.5, Aug 2026): def-only functions, comptime, Deinitable, Array, std.* imports",
   "crate_name": "geometry",
   "counts": {
-    "total": 286,
-    "translated": 127,
-    "partial": 101,
-    "stubbed": 57,
+    "total": 291,
+    "translated": 196,
+    "partial": 44,
+    "stubbed": 50,
     "skipped": 1
   },
-  "emitted_pct": 80.0,
-  "clean_pct": 44.56140350877193,
+  "emitted_pct": 82.75862068965517,
+  "clean_pct": 67.58620689655173,
   "internal_errors": 0,
   "stub_reasons": [
     {
       "key": "impl on a std/primitive type (Mojo has no extensions)",
-      "count": 14,
+      "count": 12,
       "example": "From for f32"
     },
     {
       "key": "`.into()` without a known target type",
-      "count": 12,
+      "count": 7,
       "example": "size.width.into()"
     },
     {
@@ -39,6 +39,11 @@
       "example": "Sum for Pixels"
     },
     {
+      "key": "closure without a return type annotation (needs type inference)",
+      "count": 3,
+      "example": "| id | cx.find_display(id)"
+    },
+    {
       "key": "impl of external trait `Deserialize`",
       "count": 3,
       "example": "Deserialize for AbsoluteLength"
@@ -49,11 +54,6 @@
       "example": "Serialize for AbsoluteLength"
     },
     {
-      "key": "closure with untyped parameters (needs type inference)",
-      "count": 2,
-      "example": "| id | cx.find_display(id)"
-    },
-    {
       "key": "impl of std trait `Ord` (no Mojo mapping yet)",
       "count": 2,
       "example": "Ord for Pixels"
@@ -62,11 +62,6 @@
       "key": "impl of std trait `PartialOrd` (no Mojo mapping yet)",
       "count": 2,
       "example": "PartialOrd for Pixels"
-    },
-    {
-      "key": "closure without a return type annotation (needs type inference)",
-      "count": 1,
-      "example": "| | point.relative_to(&self.origin)"
     },
     {
       "key": "impl of std trait `Hash` (no Mojo mapping yet)",
@@ -86,24 +81,9 @@
   ],
   "partial_reasons": [
     {
-      "key": "dropped bound `Add` (no Mojo std trait)",
-      "count": 34,
-      "example": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-    },
-    {
-      "key": "method gated on an extra trait bound (`where conforms_to`)",
-      "count": 31,
-      "example": "Self.T: Comparable"
-    },
-    {
       "key": "impl specialised on a concrete type argument",
       "count": 20,
       "example": "method gated with `where Self.T == Pixels`"
-    },
-    {
-      "key": "dropped bound `Sub` (no Mojo std trait)",
-      "count": 12,
-      "example": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
     },
     {
       "key": "derive `Deserialize` has no Mojo equivalent",
@@ -116,14 +96,14 @@
       "example": "#[derive(Serialize)] dropped"
     },
     {
-      "key": "dropped bound `Mul` (no Mojo std trait)",
-      "count": 10,
-      "example": "`T: Mul<Rhs, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-    },
-    {
       "key": "float->int cast: Rust saturates, Mojo conversion of out-of-range values differs",
       "count": 6,
       "example": "(self.width.0 * scale_factor).round() as i32"
+    },
+    {
+      "key": "operator on a generic parameter with a different operand type",
+      "count": 6,
+      "example": "`self.origin * rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators"
     },
     {
       "key": "derive `Refineable` has no Mojo equivalent",
@@ -136,29 +116,19 @@
       "example": "#[derive(JsonSchema)] dropped"
     },
     {
-      "key": "dropped bound `Div` (no Mojo std trait)",
-      "count": 3,
-      "example": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-    },
-    {
       "key": "derive `Neg` has no Mojo equivalent",
       "count": 2,
       "example": "#[derive(Neg)] dropped"
     },
     {
-      "key": "derive(Add) on generic struct needs the parameter to support the operator",
+      "key": "dropped bound `Mul` (no Mojo std trait)",
       "count": 2,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+      "example": "`T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation"
     },
     {
-      "key": "derive(Neg) on generic struct needs the parameter to support the operator",
+      "key": "extension impl lowered to a free function (Mojo has no extensions)",
       "count": 2,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
-    },
-    {
-      "key": "derive(Sub) on generic struct needs the parameter to support the operator",
-      "count": 2,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
+      "example": "impl Half for i32 -> Half_i32_half(self, ...); method-syntax call sites are not rewritten"
     },
     {
       "key": "Debug on data enum maps to Variant's Writable (format differs from Rust)",
@@ -169,26 +139,6 @@
       "key": "`{:?}` Debug formatting lowered to repr() (output format differs)",
       "count": 1,
       "example": "Size {{ {:?} × {:?} }}"
-    },
-    {
-      "key": "derive(AddAssign) on generic struct needs the parameter to support the operator",
-      "count": 1,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
-    },
-    {
-      "key": "derive(Div) on generic struct needs the parameter to support the operator",
-      "count": 1,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
-    },
-    {
-      "key": "derive(SubAssign) on generic struct needs the parameter to support the operator",
-      "count": 1,
-      "example": "no Mojo std trait for arithmetic; consider DType parameterisation"
-    },
-    {
-      "key": "dropped bound `Neg` (no Mojo std trait)",
-      "count": 1,
-      "example": "`T: Neg<Output = T>`: operators on generic params need a user trait or DType parameterisation"
     },
     {
       "key": "method `.rem_size()` on a value of unknown type passed through",
@@ -234,10 +184,10 @@
       "output": "geometry.mojo",
       "module": "geometry",
       "counts": {
-        "total": 286,
-        "translated": 127,
-        "partial": 101,
-        "stubbed": 57,
+        "total": 291,
+        "translated": 196,
+        "partial": 44,
+        "stubbed": 50,
         "skipped": 1
       },
       "parse_error": null,
@@ -309,22 +259,6 @@
               "detail": "#[derive(Refineable)] dropped"
             },
             {
-              "key": "derive(Add) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
-              "key": "derive(AddAssign) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
-              "key": "derive(Sub) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
-              "key": "derive(SubAssign) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
               "key": "derive `Serialize` has no Mojo equivalent",
               "detail": "#[derive(Serialize)] dropped"
             },
@@ -335,10 +269,6 @@
             {
               "key": "derive `JsonSchema` has no Mojo equivalent",
               "detail": "#[derive(JsonSchema)] dropped"
-            },
-            {
-              "key": "derive(Neg) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
             }
           ]
         },
@@ -405,85 +335,50 @@
           "kind": "method",
           "name": "Point.relative_to",
           "line": 227,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.mul",
           "line": 243,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<Rhs, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.mul_assign",
           "line": 256,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.div",
           "line": 269,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Div` (no Mojo std trait)",
-              "detail": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.max",
           "line": 281,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.min",
           "line": 311,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Point.clamp",
           "line": 341,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -506,20 +401,8 @@
           "status": "partial",
           "reasons": [
             {
-              "key": "derive(Add) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
               "key": "derive `Deserialize` has no Mojo equivalent",
               "detail": "#[derive(Deserialize)] dropped"
-            },
-            {
-              "key": "derive(Div) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
-            },
-            {
-              "key": "derive(Neg) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
             },
             {
               "key": "derive `Refineable` has no Mojo equivalent",
@@ -528,10 +411,6 @@
             {
               "key": "derive `Serialize` has no Mojo equivalent",
               "detail": "#[derive(Serialize)] dropped"
-            },
-            {
-              "key": "derive(Sub) on generic struct needs the parameter to support the operator",
-              "detail": "no Mojo std trait for arithmetic; consider DType parameterisation"
             }
           ]
         },
@@ -560,13 +439,8 @@
           "kind": "method",
           "name": "Size.center",
           "line": 469,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -598,25 +472,15 @@
           "kind": "method",
           "name": "Size.max",
           "line": 537,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Size.min",
           "line": 567,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -634,13 +498,15 @@
           "kind": "method",
           "name": "Size.mul_assign",
           "line": 618,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "impl",
+          "name": "Eq for Size",
+          "line": 624,
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -750,7 +616,7 @@
           "status": "stubbed",
           "reasons": [
             {
-              "key": "closure with untyped parameters (needs type inference)",
+              "key": "closure without a return type annotation (needs type inference)",
               "detail": "| id | cx.find_display(id)"
             }
           ]
@@ -762,7 +628,7 @@
           "status": "stubbed",
           "reasons": [
             {
-              "key": "closure with untyped parameters (needs type inference)",
+              "key": "closure without a return type annotation (needs type inference)",
               "detail": "| id | cx.find_display(id)"
             }
           ]
@@ -778,281 +644,120 @@
           "kind": "method",
           "name": "Bounds.from_corners",
           "line": 794,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.from_anchor_and_size",
           "line": 838,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.centered_at",
           "line": 881,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.top_center",
           "line": 895,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.bottom_center",
           "line": 903,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.left_center",
           "line": 911,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.right_center",
           "line": 919,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.intersects",
           "line": 932,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.center",
           "line": 980,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.half_perimeter",
           "line": 1013,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.dilate",
           "line": 1040,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.extend",
           "line": 1075,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.inset",
           "line": 1099,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Neg` (no Mojo std trait)",
-              "detail": "`T: Neg<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.intersect",
           "line": 1110,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.union",
           "line": 1152,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.join",
           "line": 1191,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.space_within",
           "line": 1227,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1063,6 +768,14 @@
             {
               "key": "dropped bound `Mul` (no Mojo std trait)",
               "detail": "`T: Mul<Rhs, Output = Rhs>`: operators on generic params need a user trait or DType parameterisation"
+            },
+            {
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.origin * rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators"
+            },
+            {
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.size * rhs`: mojo_rt.ops only covers `Output = Self` operators"
             }
           ]
         },
@@ -1073,8 +786,12 @@
           "status": "partial",
           "reasons": [
             {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.origin * rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators"
+            },
+            {
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.size * rhs`: mojo_rt.ops only covers `Output = Self` operators"
             }
           ]
         },
@@ -1085,8 +802,12 @@
           "status": "partial",
           "reasons": [
             {
-              "key": "dropped bound `Div` (no Mojo std trait)",
-              "detail": "`T: Div<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.origin / rhs.clone()`: mojo_rt.ops only covers `Output = Self` operators"
+            },
+            {
+              "key": "operator on a generic parameter with a different operand type",
+              "detail": "`self.size / rhs`: mojo_rt.ops only covers `Output = Self` operators"
             }
           ]
         },
@@ -1094,25 +815,15 @@
           "kind": "method",
           "name": "Bounds.add",
           "line": 1287,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.sub",
           "line": 1301,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Sub` (no Mojo std trait)",
-              "detail": "`T: Sub<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1125,181 +836,92 @@
           "kind": "method",
           "name": "Bounds.top",
           "line": 1322,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.bottom",
           "line": 1331,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.left",
           "line": 1340,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.right",
           "line": 1349,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.top_right",
           "line": 1358,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.bottom_right",
           "line": 1382,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.bottom_left",
           "line": 1406,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.corner",
           "line": 1435,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.contains",
           "line": 1470,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.is_contained_within",
           "line": 1506,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.map",
           "line": 1544,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.map_origin",
           "line": 1583,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.map_size",
           "line": 1607,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1317,25 +939,15 @@
           "kind": "method",
           "name": "Bounds.is_empty",
           "line": 1649,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.fmt",
           "line": 1661,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1429,37 +1041,29 @@
           "kind": "method",
           "name": "Edges.add",
           "line": 1801,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Edges.mul",
           "line": 1817,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Edges.mul_assign",
           "line": 1832,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "impl",
+          "name": "Copy for Edges",
+          "line": 1840,
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1582,25 +1186,15 @@
           "kind": "method",
           "name": "Edges.along",
           "line": 2201,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Edges.apply_along",
           "line": 2208,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1677,33 +1271,15 @@
           "kind": "method",
           "name": "Corners.all",
           "line": 2363,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Corners.corner",
           "line": 2396,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Add` (no Mojo std trait)",
-              "detail": "`T: Add<T, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Half"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1745,17 +1321,8 @@
           "kind": "method",
           "name": "Corners.clamp_radii_for_quad_size",
           "line": 2547,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Div` (no Mojo std trait)",
-              "detail": "`T: Div<f32, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            },
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: Comparable"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -1768,25 +1335,22 @@
           "kind": "method",
           "name": "Corners.mul",
           "line": 2621,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Corners.mul_assign",
           "line": 2636,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "dropped bound `Mul` (no Mojo std trait)",
-              "detail": "`T: Mul<S, Output = T>`: operators on generic params need a user trait or DType parameterisation"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "impl",
+          "name": "Copy for Corners",
+          "line": 2644,
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -2095,6 +1659,13 @@
           "reasons": []
         },
         {
+          "kind": "impl",
+          "name": "Eq for Pixels",
+          "line": 2973,
+          "status": "translated",
+          "reasons": []
+        },
+        {
           "kind": "method",
           "name": "Pixels.partial_cmp",
           "line": 2976,
@@ -2368,6 +1939,13 @@
           "kind": "method",
           "name": "ScaledPixels.ceil",
           "line": 3197,
+          "status": "translated",
+          "reasons": []
+        },
+        {
+          "kind": "impl",
+          "name": "Eq for ScaledPixels",
+          "line": 3207,
           "status": "translated",
           "reasons": []
         },
@@ -2851,25 +2429,15 @@
           "kind": "method",
           "name": "DefiniteLength.from",
           "line": 3694,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "`.into()` without a known target type",
-              "detail": "pixels.into()"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "DefiniteLength.from",
           "line": 3700,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "`.into()` without a known target type",
-              "detail": "rems.into()"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -3017,25 +2585,15 @@
           "kind": "method",
           "name": "Length.from",
           "line": 3864,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "`.into()` without a known target type",
-              "detail": "pixels.into()"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Length.from",
           "line": 3870,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "`.into()` without a known target type",
-              "detail": "rems.into()"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -3048,13 +2606,8 @@
           "kind": "method",
           "name": "Length.from",
           "line": 3882,
-          "status": "stubbed",
-          "reasons": [
-            {
-              "key": "`.into()` without a known target type",
-              "detail": "length.into()"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
@@ -3130,25 +2683,25 @@
         },
         {
           "kind": "method",
-          "name": "i32.half",
+          "name": "i32.half (extension fn Half_i32_half)",
           "line": 3945,
-          "status": "stubbed",
+          "status": "partial",
           "reasons": [
             {
-              "key": "impl on a std/primitive type (Mojo has no extensions)",
-              "detail": "Half for i32"
+              "key": "extension impl lowered to a free function (Mojo has no extensions)",
+              "detail": "impl Half for i32 -> Half_i32_half(self, ...); method-syntax call sites are not rewritten"
             }
           ]
         },
         {
           "kind": "method",
-          "name": "f32.half",
+          "name": "f32.half (extension fn Half_f32_half)",
           "line": 3951,
-          "status": "stubbed",
+          "status": "partial",
           "reasons": [
             {
-              "key": "impl on a std/primitive type (Mojo has no extensions)",
-              "detail": "Half for f32"
+              "key": "extension impl lowered to a free function (Mojo has no extensions)",
+              "detail": "impl Half for f32 -> Half_f32_half(self, ...); method-syntax call sites are not rewritten"
             }
           ]
         },
@@ -3245,49 +2798,29 @@
           "kind": "method",
           "name": "Point.is_zero",
           "line": 4047,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: IsZero"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Size.is_zero",
           "line": 4056,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: IsZero"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Bounds.is_zero",
           "line": 4062,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: IsZero"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "method",
           "name": "Corners.is_zero",
           "line": 4071,
-          "status": "partial",
-          "reasons": [
-            {
-              "key": "method gated on an extra trait bound (`where conforms_to`)",
-              "detail": "Self.T: IsZero"
-            }
-          ]
+          "status": "translated",
+          "reasons": []
         },
         {
           "kind": "mod",

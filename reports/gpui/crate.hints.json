@@ -96,6 +96,12 @@
     "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
   },
   {
+    "file": "src/scene.rs",
+    "item": "new",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
     "file": "src/spring.rs",
     "item": "SpringConfig",
     "kind": "simd-struct",
@@ -120,6 +126,12 @@
     "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
   },
   {
+    "file": "src/spring.rs",
+    "item": "settle_time",
+    "kind": "simd-pack",
+    "message": "straight-line numeric code (>=8 arithmetic ops): pack components into `SIMD[DType.float32, 4]` and operate lane-wise"
+  },
+  {
     "file": "src/queue.rs",
     "item": "SendError",
     "kind": "dtype-param",
@@ -130,18 +142,6 @@
     "item": "Stateful",
     "kind": "dtype-param",
     "message": "numeric generic over a type parameter: Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields, which gives arithmetic without operator traits"
-  },
-  {
-    "file": "src/elements/text.rs",
-    "item": "apply_font_family_overrides",
-    "kind": "parallelize",
-    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
-  },
-  {
-    "file": "src/elements/text.rs",
-    "item": "wrapped_text",
-    "kind": "parallelize",
-    "message": "nested loops: if outer iterations are independent, `parallelize[worker](n)` over the outer loop"
   },
   {
     "file": "src/gestures.rs#mod friction_spline",

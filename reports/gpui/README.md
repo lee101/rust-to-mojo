@@ -24,11 +24,13 @@ Output of `rust-to-mojo` over Zed's `crates/gpui` at the revision in
 * **stubbed**: no code. A TODO header plus the original Rust as comments.
 * **emitted %** = (translated + partial) / non-skipped. **clean %** = translated / non-skipped.
 
-The whole-crate figure is dominated by one cause. Types with `dyn Trait` fields (`Box<dyn PlatformWindow>`,
-`Rc<dyn Fn>` callbacks), parking_lot locks, or borrowed fields are stubbed, and that
-cascades to every method of those types (`App`, `Window`, `Context`...). This is reported as
-`method of an untranslated type (cause: ...)`. Those types are GPUI's runtime core, and
-porting them is a design task: Mojo 1.0 has no existential types. The leaf modules
-(`geometry`, `color`, `style` value types) translate at 69–80% emitted.
+Pass 1 was dominated by a cascade: a type with one `dyn Trait`, lock or borrowed field was
+stubbed together with every method. Since pass 2 such fields are erased to
+`mojo_rt.erased.Erased` (or lowered to a `mojo_rt.sync` lock or a `Pointer` with an origin
+parameter), the type translates, and only code touching the erased field is stubbed
+("uses a field erased to `Erased`"). The remaining top reasons are closures whose types
+depend on the callee's own generic parameters, `dyn Trait` in signatures, and erased-field
+uses. The runtime core (`App`, `Window`, `Context`) still needs a hand design; see
+[docs/gpui-runtime-port.md](../../docs/gpui-runtime-port.md).
 
 Nothing here has been compiled. See MAPPING.md for the unverified syntax list.

@@ -3,28 +3,6 @@
 
 from color import Hsla
 
-# TODO(rust-to-mojo): impl `Hsla` not translated: impl for a type defined in another module or not translated (Mojo needs methods inside the struct)
-# --- original Rust ---
-# impl Hsla {
-#     /// Proptest [`Strategy`] that produces opaque colors (i.e. alpha = 1).
-#     ///
-#     /// For truly arbitrary colors, use the [`Arbitrary`] implementation.
-#     pub fn opaque_strategy() -> impl Strategy<Value = Self> {
-#         (0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0).prop_map(|(h, s, l)| Hsla { h, s, l, a: 1. })
-#     }
-# }
-# --- end original Rust ---
+# NOTE(rust-to-mojo): `impl Hsla` is translated in `color`, merged into the type's definition (Mojo needs methods inside the struct).
 
-# TODO(rust-to-mojo): impl `Arbitrary for Hsla` not translated: impl for a type defined in another module or not translated (Mojo needs methods inside the struct)
-# --- original Rust ---
-# impl Arbitrary for Hsla {
-#     type Strategy = BoxedStrategy<Self>;
-#     type Parameters = ();
-#
-#     fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
-#         (0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0, 0.0f32..=1.0)
-#             .prop_map(|(h, s, l, a)| Hsla { h, s, l, a })
-#             .boxed()
-#     }
-# }
-# --- end original Rust ---
+# NOTE(rust-to-mojo): `impl Arbitrary for Hsla` is translated in `color`, merged into the type's definition (Mojo needs methods inside the struct).
