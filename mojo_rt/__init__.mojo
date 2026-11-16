@@ -12,6 +12,10 @@ Modules:
   dict    HashMap helpers (remove -> Optional).
   cell    Cell / RefCell stand-ins (no dynamic borrow checking yet).
   range   RustRange, a value-level std::ops::Range.
+  erased  Erased, the opaque placeholder for untranslatable fields (dyn Trait, ...).
+  sync    Mutex / RwLock stand-ins (single-threaded, no locking).
+  ops     Generic arithmetic: `R*` operator traits plus `add`/`sub`/... dispatch
+          for Rust `T: Add<Output = T>` bounds (built-in scalars and user types).
 
 Target: Mojo 1.0. This shim has NOT been compiled yet (no Mojo toolchain was
 available when it was written); run scripts/check_mojo.sh on a Mojo machine.
