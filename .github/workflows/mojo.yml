@@ -1,0 +1,77 @@
+name: mojo
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  MOJO_VERSION: "1.2.0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  goldens:
+    name: goldens + mojo_rt (Mojo ${{ env.MOJO_VERSION }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - name: Install Mojo
+        run: |
+          uv venv "$RUNNER_TEMP/mojo-venv"
+          VIRTUAL_ENV="$RUNNER_TEMP/mojo-venv" uv pip install "mojo==${MOJO_VERSION}"
+          echo "$RUNNER_TEMP/mojo-venv/bin" >> "$GITHUB_PATH"
+      - name: Build translator
+        run: cargo build --release
+      - name: Regenerate goldens (must match the committed ones)
+        run: |
+          UPDATE_GOLDEN=1 cargo test --test golden
+          git diff --stat --exit-code tests/golden || { echo "::error::committed goldens are stale"; exit 1; }
+      - name: cargo test
+        run: cargo test
+      - name: Compile mojo_rt and goldens
+        run: bash scripts/ci_mojo.sh mojo-logs/compile
+      - name: Runtime diff (Mojo vs Rust)
+        if: always()
+        run: bash scripts/ci_runtime.sh mojo-logs/runtime
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Mojo ${MOJO_VERSION} compile";
+            echo '| file | status |'; echo '| --- | --- |';
+            awk -F'\t' '{print "| " $1 " | " $2 " |"}' mojo-logs/compile/summary.tsv 2>/dev/null;
+            echo; echo "### Runtime diff";
+            echo '| test | status |'; echo '| --- | --- |';
+            awk -F'\t' '{print "| " $1 " | " $2 " |"}' mojo-logs/runtime/summary.tsv 2>/dev/null;
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mojo-logs
+          path: mojo-logs
+
+  gpui:
+    name: GPUI geometry/color (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - name: Install Mojo
+        run: |
+          uv venv "$RUNNER_TEMP/mojo-venv"
+          VIRTUAL_ENV="$RUNNER_TEMP/mojo-venv" uv pip install "mojo==${MOJO_VERSION}"
+          echo "$RUNNER_TEMP/mojo-venv/bin" >> "$GITHUB_PATH"
+      - name: Build translator
+        run: cargo build --release
+      - name: Translate and compile geometry.rs / color.rs
+        run: bash scripts/ci_gpui.sh gpui-logs "$RUNNER_TEMP/zed"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpui-logs
+          path: gpui-logs
