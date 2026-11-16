@@ -1,5 +1,5 @@
 trait Shape:
-    associatedtype Unit: Movable & Deinitable
+    comptime Unit: Movable & Deinitable
     comptime SIDES: UInt32
 
     def area(self) -> Float64:

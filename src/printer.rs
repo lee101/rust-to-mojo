@@ -248,7 +248,7 @@ impl Printer {
                     prev_was_method = false;
                 }
                 MMember::AssocType { name, bound } => {
-                    self.line(&format!("associatedtype {}: {}", name, bound));
+                    self.line(&format!("comptime {}: {}", name, bound));
                     wrote_code = true;
                 }
                 MMember::Method(f) => {
@@ -267,10 +267,10 @@ impl Printer {
                 }
             }
         }
-        if !wrote_code && !has_doc {
+        if !wrote_code {
+            // Mojo 1.x rejects a body that is only a docstring.
+            let _ = has_doc;
             self.line("pass");
-        } else if !wrote_code && has_doc {
-            // a docstring alone is a valid body
         }
     }
 
@@ -369,6 +369,13 @@ impl Printer {
             }
             MStmt::Return(e) => match e {
                 None => self.line("return"),
+                // `abort` returns `Never`, which does not convert to the
+                // function's return type: emit it as a statement.
+                Some(e @ MExpr::Call(f, _)) if matches!(&**f, MExpr::Name(n) if n == "abort") => {
+                    let mut l = String::new();
+                    write_expr(&mut l, e, 0);
+                    self.line(&l);
+                }
                 Some(e) => {
                     let mut l = String::from("return ");
                     write_expr(&mut l, e, 0);

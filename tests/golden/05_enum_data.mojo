@@ -1,3 +1,4 @@
+from std.os import abort
 from std.utils import Variant
 
 @fieldwise_init
@@ -14,6 +15,7 @@ struct Shape_Rect(Copyable, Writable, Equatable):
 @fieldwise_init
 struct Shape_Empty(Copyable, Writable, Equatable):
     """Payload of `Shape::Empty`."""
+    pass
 
 # TODO(rust-to-mojo): Debug on data enum maps to Variant's Writable (format differs from Rust) -- Shape
 # Rust enum `Shape` lowered to a tagged struct over Variant (see MAPPING.md#enums).
@@ -36,20 +38,26 @@ struct Shape(Copyable, Writable, Equatable):
     def isa_Circle(self) -> Bool:
         return self._v.isa[Shape_Circle]()
 
-    def as_Circle(ref self) -> ref [self] Shape_Circle:
-        return self._v[Shape_Circle]
+    def as_Circle(ref self) -> ref [self._v] Shape_Circle:
+        if not self._v.isa[Shape_Circle]():
+            abort("Shape::Circle: wrong enum variant")
+        return self._v.unsafe_get[Shape_Circle]()
 
     def isa_Rect(self) -> Bool:
         return self._v.isa[Shape_Rect]()
 
-    def as_Rect(ref self) -> ref [self] Shape_Rect:
-        return self._v[Shape_Rect]
+    def as_Rect(ref self) -> ref [self._v] Shape_Rect:
+        if not self._v.isa[Shape_Rect]():
+            abort("Shape::Rect: wrong enum variant")
+        return self._v.unsafe_get[Shape_Rect]()
 
     def isa_Empty(self) -> Bool:
         return self._v.isa[Shape_Empty]()
 
-    def as_Empty(ref self) -> ref [self] Shape_Empty:
-        return self._v[Shape_Empty]
+    def as_Empty(ref self) -> ref [self._v] Shape_Empty:
+        if not self._v.isa[Shape_Empty]():
+            abort("Shape::Empty: wrong enum variant")
+        return self._v.unsafe_get[Shape_Empty]()
 
     def area(self) -> Float32:
         if self.isa_Circle():

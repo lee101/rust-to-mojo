@@ -23,7 +23,7 @@ for t in "$ROOT"/tests/runtime/*.mojo; do
   name="$(basename "$t" .mojo)"
   rs="$ROOT/tests/runtime/$name.rs"
   st=ok
-  if ! "$MOJO" run -I "$ROOT" -I "$WORK/mods" "$t" >"$LOGDIR/$name.mojo.out" 2>"$LOGDIR/$name.mojo.err"; then
+  if ! "$MOJO" run --fp-mode contract=off -I "$ROOT" -I "$WORK/mods" "$t" >"$LOGDIR/$name.mojo.out" 2>"$LOGDIR/$name.mojo.err"; then
     st="FAIL(mojo)"
   fi
   if ! rustc --edition 2021 -O -A warnings -o "$WORK/$name" "$rs" 2>"$LOGDIR/$name.rustc.err" \

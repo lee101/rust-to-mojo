@@ -10,7 +10,6 @@ method Point.sum [line 59]: translated
 method Point.delta [line 63]: translated
 method Point.scale [line 69]: translated
 fn double [line 75]: translated
-fn bump [line 79]: partial
-    - dropped bound `Add` (no Mojo std trait)
+fn bump [line 79]: stubbed
     - operator on a generic parameter with a different operand type
-total 13 translated 12 partial 1 stubbed 0 skipped 0
+total 13 translated 12 partial 0 stubbed 1 skipped 0

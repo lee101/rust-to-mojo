@@ -9,10 +9,9 @@ method App.demo [line 38]: translated
 fn grow [line 46]: translated
 fn positives [line 50]: partial
     - slice argument `&[T]` lowered to List[T] borrow
-fn first_len [line 54]: partial
-    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
+fn first_len [line 54]: translated
 fn or_default [line 58]: translated
 fn is_big [line 62]: translated
 fn opaque [line 66]: stubbed
     - closure with untyped parameters (needs type inference)
-total 13 translated 9 partial 3 stubbed 1 skipped 0
+total 13 translated 10 partial 2 stubbed 1 skipped 0

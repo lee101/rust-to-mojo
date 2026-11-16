@@ -25,11 +25,11 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 
     # TODO(rust-to-mojo): impl specialised on a concrete type argument -- method gated with `where Self.T == Float32`
     def length(self) -> Float32 where Self.T == Float32:
-        return sqrt(self.x * self.x + self.y * self.y)
+        return sqrt(rebind[Float32](self.x) * rebind[Float32](self.x) + rebind[Float32](self.y) * rebind[Float32](self.y))
 
     # TODO(rust-to-mojo): impl specialised on a concrete type argument -- method gated with `where Self.T == Float32`
     def scale(self, factor: Float32) -> Point[Float32] where Self.T == Float32:
-        return Point(x=self.x * factor, y=self.y * factor)
+        return Point(x=rebind[Float32](self.x) * factor, y=rebind[Float32](self.y) * factor)
 
 def point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](var x: T, var y: T) -> Point[T]:
     return Point(x=x^, y=y^)

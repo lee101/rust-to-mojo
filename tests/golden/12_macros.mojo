@@ -38,7 +38,7 @@ def never(x: Int32) -> Int32:
     if x == 0:
         return 1
     else:
-        return abort("internal error: entered unreachable code")
+        abort("internal error: entered unreachable code")
 
 # TODO(rust-to-mojo): logging macro dropped (no Mojo logging facade chosen) -- debug!
 def logs(x: Int32) -> Int32:

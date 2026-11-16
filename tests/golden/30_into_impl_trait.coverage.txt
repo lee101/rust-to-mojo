@@ -17,5 +17,4 @@ fn evens [line 62]: stubbed
     - `impl Trait` return type
 fn label_len [line 67]: partial
     - `Option<&T>` lowered to `Optional[T]` (copies the referent)
-    - String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics
 total 15 translated 11 partial 3 stubbed 1 skipped 0

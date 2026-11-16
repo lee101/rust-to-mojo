@@ -2,7 +2,7 @@ def squares(n: Int) -> List[Int]:
     var out_: List[Int] = List[Int]()
     for i in range(n):
         out_.append(i * i)
-    return out_
+    return out_^
 
 # TODO(rust-to-mojo): slice argument `&[T]` lowered to List[T] borrow -- callers passing sub-slices need Span[T, origin]
 def total(values: List[Float32]) -> Float32:
@@ -27,7 +27,7 @@ def word_counts(words: List[String]) -> Dict[String, Int]:
             counts[w.copy()] = c + 1
         else:
             counts[w.copy()] = 1
-    return counts
+    return counts^
 
 def sum_map(m: Dict[String, Int32]) -> Int32:
     var s: Int32 = 0
@@ -38,5 +38,5 @@ def sum_map(m: Dict[String, Int32]) -> Int32:
     return s
 
 def literal() -> List[Int32]:
-    var v: List[_] = [1, 2, 3]
+    var v: List[Int32] = [1, 2, 3]
     return v^

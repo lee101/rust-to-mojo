@@ -50,10 +50,9 @@ def positives(xs: List[Int32]) -> Int:
         return x > 0
     return count_if(xs, __closure4)
 
-# TODO(rust-to-mojo): String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics -- n.len()
 def first_len(var name: Optional[String]) -> Int:
     def __closure5(n: String) -> Int:
-        return len(n)
+        return n.byte_length()
     return unwrap_or(rt_option.map(name, __closure5), 0)
 
 def or_default(v: Optional[Int32]) -> Int32:

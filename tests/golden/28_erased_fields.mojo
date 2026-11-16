@@ -24,9 +24,8 @@ struct App:
         self.frame_count += 1
         return self.frame_count
 
-    # TODO(rust-to-mojo): String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics -- self.title.len()
     def title_len(self) -> Int:
-        return len(self.title)
+        return self.title.byte_length()
 
     # TODO(rust-to-mojo): method `App.platform_name` not translated: uses a field erased to `Erased` (cause: `dyn Trait` (no existential types in Mojo)) (self.platform)
     # signature hint: def platform_name(self) -> String
@@ -50,11 +49,15 @@ struct App:
 struct Counter:
     var hits: Mutex[UInt32]
 
-    # TODO(rust-to-mojo): lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references) -- self.hits.lock()
-    def bump(self) -> UInt32:
-        ref hits = self.hits.lock()
-        hits += 1
-        return hits
+    # TODO(rust-to-mojo): method `Counter.bump` not translated: interior mutability through a shared reference (lock guard written via `&self`; Mojo has none) (self.hits.lock())
+    # signature hint: def bump(self) -> UInt32
+    # --- original Rust ---
+    # pub fn bump(&self) -> u32 {
+    #     let mut hits = self.hits.lock();
+    #     *hits += 1;
+    #     *hits
+    # }
+    # --- end original Rust ---
 
     # TODO(rust-to-mojo): lock lowered to mojo_rt.sync shim (no mutual exclusion; guards are plain references) -- self.hits.lock()
     def read_(self) -> UInt32:
@@ -68,12 +71,11 @@ struct Span[origin_a: ImmOrigin]:
 
     # TODO(rust-to-mojo): borrowed-reference field initialised with `Pointer(to=...)` (the struct's origin parameter must be inferable at the call site) -- Span.text
     @staticmethod
-    def new(text: String, start: Int) -> Self:
+    def new(ref [Self.origin_a] text: String, start: Int) -> Self:
         return Span(text=Pointer(to=text), start=start)
 
-    # TODO(rust-to-mojo): String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics -- self.text.len()
     def len_(self) -> Int:
-        return len(self.text[]) - self.start
+        return self.text[].byte_length() - self.start
 
 # TODO(rust-to-mojo): `&'static` field stored by value (copy of immutable static data) -- Meta.names: &'static[&'static str]
 @fieldwise_init

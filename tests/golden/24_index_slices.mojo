@@ -3,7 +3,7 @@ struct Grid:
     var cells: List[Float32]
     var width: Int
 
-    def __getitem__(self, i: Int) -> ref [self] Float32:
+    def __getitem__(self, i: Int) -> ref [origin_of(self.cells)._get_owned_interior["element"]] Float32:
         return self.cells[i]
 
     # TODO(rust-to-mojo): method `Grid.row` not translated: returning a slice / trait-object reference (&[f32])
@@ -16,5 +16,5 @@ struct Grid:
     def get(self, x: Int, y: Int) -> Float32:
         return self.cells[y * self.width + x]
 
-    def first(self) -> ref [self] Float32:
+    def first(self) -> ref [origin_of(self.cells)._get_owned_interior["element"]] Float32:
         return self.cells[0]

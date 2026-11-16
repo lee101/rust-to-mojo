@@ -14,9 +14,13 @@ def shared(v: Int32) -> ArcPointer[RefCell[List[Int32]]]:
     var data = ArcPointer(RefCell(__vec1^))
     var other = data.copy()
     other[].borrow_mut().append(v + 1)
-    return data
+    return data^
 
-# TODO(rust-to-mojo): Cell mutation needs `mut` access in Mojo (no interior mutability) -- n.visits.set(n.visits.get() + 1)
-def count(n: Node) -> UInt32:
-    n.visits.set(n.visits.get() + 1)
-    return n.visits.get()
+# TODO(rust-to-mojo): fn `count` not translated: interior mutability through a shared reference (`Cell` mutated via `&`; Mojo has none) (n.visits.set(n.visits.get() + 1))
+# signature hint: def count(n: Node) -> UInt32
+# --- original Rust ---
+# pub fn count(n: &Node) -> u32 {
+#     n.visits.set(n.visits.get() + 1);
+#     n.visits.get()
+# }
+# --- end original Rust ---

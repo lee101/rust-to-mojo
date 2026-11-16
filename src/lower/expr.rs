@@ -77,6 +77,184 @@ pub fn count_uses(block: &syn::Block) -> HashMap<String, usize> {
     v.0
 }
 
+/// Source position (line, column) of the textually last use of each Rust
+/// identifier in the body. Uses inside closures pin the entry to `MAX` (never
+/// transferred). A by-value use of a non-Copy binding at its last position is
+/// a Rust move, so it can become `x^`.
+pub fn last_uses(block: &syn::Block) -> HashMap<String, (usize, usize)> {
+    use syn::spanned::Spanned;
+    use syn::visit::Visit;
+    const NEVER: (usize, usize) = (usize::MAX, usize::MAX);
+    fn note(m: &mut HashMap<String, (usize, usize)>, k: String, pos: (usize, usize)) {
+        let e = m.entry(k).or_insert(pos);
+        if *e != NEVER && pos > *e {
+            *e = pos;
+        }
+    }
+    fn tokens(m: &mut HashMap<String, (usize, usize)>, t: proc_macro2::TokenTree) {
+        match t {
+            proc_macro2::TokenTree::Ident(i) => {
+                let p = i.span().start();
+                note(m, i.to_string(), (p.line, p.column));
+            }
+            proc_macro2::TokenTree::Group(g) => {
+                for t in g.stream() {
+                    tokens(m, t);
+                }
+            }
+            _ => {}
+        }
+    }
+    struct V(HashMap<String, (usize, usize)>);
+    impl<'ast> Visit<'ast> for V {
+        fn visit_expr_path(&mut self, p: &'ast syn::ExprPath) {
+            if p.path.segments.len() == 1 {
+                let s = p.span().start();
+                note(&mut self.0, p.path.segments[0].ident.to_string(), (s.line, s.column));
+            }
+            syn::visit::visit_expr_path(self, p);
+        }
+        fn visit_macro(&mut self, m: &'ast syn::Macro) {
+            for t in m.tokens.clone() {
+                tokens(&mut self.0, t);
+            }
+        }
+        fn visit_expr_closure(&mut self, c: &'ast syn::ExprClosure) {
+            let mut inner = V(HashMap::new());
+            syn::visit::visit_expr_closure(&mut inner, c);
+            for (k, _) in inner.0 {
+                self.0.insert(k, NEVER);
+            }
+        }
+    }
+    let mut v = V(HashMap::new());
+    v.visit_block(block);
+    v.0
+}
+
+/// Identifiers returned by the body: the tail expression or `return x`.
+pub fn returned_idents(block: &syn::Block) -> HashSet<String> {
+    use syn::visit::Visit;
+    struct V(HashSet<String>);
+    impl<'ast> Visit<'ast> for V {
+        fn visit_expr_return(&mut self, r: &'ast syn::ExprReturn) {
+            if let Some(e) = &r.expr {
+                if let Some(n) = single_ident(e) {
+                    self.0.insert(n);
+                }
+            }
+            syn::visit::visit_expr_return(self, r);
+        }
+        fn visit_expr_closure(&mut self, _c: &'ast syn::ExprClosure) {}
+    }
+    let mut v = V(HashSet::new());
+    v.visit_block(block);
+    if let Some(syn::Stmt::Expr(e, None)) = block.stmts.last() {
+        if let Some(n) = single_ident(e) {
+            v.0.insert(n);
+        }
+    }
+    v.0
+}
+
+/// The element expressions of `vec![a, b, c]` (not `vec![x; n]`).
+fn vec_lit_elems(m: &syn::Macro) -> Option<Vec<Expr>> {
+    use syn::punctuated::Punctuated;
+    let p = m.parse_body_with(Punctuated::<Expr, syn::Token![,]>::parse_terminated).ok()?;
+    Some(p.into_iter().collect())
+}
+
+/// Start positions of `.lock()` / `.write()` / `.borrow_mut()` calls whose
+/// result is written: `x.lock().push(..)`, `*x.lock() += 1`, or
+/// `let g = x.lock();` followed by a write through `g` (`*g = ..`,
+/// `*g += ..`, `g.f = ..`, or a mutating method call on `g`).
+pub fn mutated_guard_calls(block: &syn::Block) -> HashSet<(usize, usize)> {
+    use syn::spanned::Spanned;
+    use syn::visit::Visit;
+    const MUTATING: &[&str] = &[
+        "push", "push_str", "insert", "remove", "clear", "extend", "pop", "truncate", "retain", "sort", "sort_by",
+        "drain", "append", "set", "take", "replace", "swap", "entry", "get_mut", "iter_mut", "dedup", "reverse",
+        "resize", "swap_remove", "add_assign", "sub_assign",
+    ];
+    fn guard_call(e: &Expr) -> Option<&syn::ExprMethodCall> {
+        match e {
+            Expr::MethodCall(mc) => {
+                let n = mc.method.to_string();
+                if (n == "unwrap" || n == "expect") && matches!(&*mc.receiver, Expr::MethodCall(_)) {
+                    return guard_call(&mc.receiver);
+                }
+                if matches!(n.as_str(), "lock" | "write" | "borrow_mut") {
+                    Some(mc)
+                } else {
+                    None
+                }
+            }
+            Expr::Paren(p) => guard_call(&p.expr),
+            Expr::Unary(u) if matches!(u.op, syn::UnOp::Deref(_)) => guard_call(&u.expr),
+            _ => None,
+        }
+    }
+    fn root_ident(e: &Expr) -> Option<String> {
+        match e {
+            Expr::Field(f) => root_ident(&f.base),
+            Expr::Index(i) => root_ident(&i.expr),
+            Expr::Paren(p) => root_ident(&p.expr),
+            Expr::Unary(u) if matches!(u.op, syn::UnOp::Deref(_)) => root_ident(&u.expr),
+            _ => single_ident(e),
+        }
+    }
+    fn key(mc: &syn::ExprMethodCall) -> (usize, usize) {
+        let p = mc.span().start();
+        (p.line, p.column)
+    }
+    #[derive(Default)]
+    struct V {
+        out: HashSet<(usize, usize)>,
+        guards: HashMap<String, (usize, usize)>,
+    }
+    impl V {
+        fn written(&mut self, target: &Expr) {
+            if let Some(mc) = guard_call(target) {
+                self.out.insert(key(mc));
+            } else if let Some(n) = root_ident(target) {
+                if let Some(k) = self.guards.get(&n) {
+                    self.out.insert(*k);
+                }
+            }
+        }
+    }
+    impl<'ast> Visit<'ast> for V {
+        fn visit_local(&mut self, l: &'ast syn::Local) {
+            if let (syn::Pat::Ident(pi), Some(init)) = (&l.pat, &l.init) {
+                if let Some(mc) = guard_call(&init.expr) {
+                    self.guards.insert(pi.ident.to_string(), key(mc));
+                }
+            }
+            syn::visit::visit_local(self, l);
+        }
+        fn visit_expr_assign(&mut self, a: &'ast syn::ExprAssign) {
+            self.written(&a.left);
+            syn::visit::visit_expr_assign(self, a);
+        }
+        fn visit_expr_binary(&mut self, b: &'ast syn::ExprBinary) {
+            use syn::BinOp as B;
+            if matches!(b.op, B::AddAssign(_) | B::SubAssign(_) | B::MulAssign(_) | B::DivAssign(_) | B::RemAssign(_) | B::BitAndAssign(_) | B::BitOrAssign(_) | B::BitXorAssign(_) | B::ShlAssign(_) | B::ShrAssign(_)) {
+                self.written(&b.left);
+            }
+            syn::visit::visit_expr_binary(self, b);
+        }
+        fn visit_expr_method_call(&mut self, mc: &'ast syn::ExprMethodCall) {
+            if MUTATING.contains(&mc.method.to_string().as_str()) {
+                self.written(&mc.receiver);
+            }
+            syn::visit::visit_expr_method_call(self, mc);
+        }
+    }
+    let mut v = V::default();
+    v.visit_block(block);
+    v.out
+}
+
 /// Rust iterator/closure-based methods we do not lower yet.
 const ITER_METHODS: &[&str] = &[
     "iter", "iter_mut", "into_iter", "map", "filter", "filter_map", "flat_map", "flatten", "fold", "reduce", "collect",
@@ -315,8 +493,17 @@ impl<'a> FileCtx<'a> {
                 if let Expr::Macro(m) = init {
                     if path_last(&m.mac.path) == "vec" {
                         if let Some(elems) = self.vec_elems(&m.mac)? {
-                            let elem_ty = match &ann_mty {
-                                Some(t @ MType::Named(n, _)) if n == "List" => t.clone(),
+                            let all_lit = |pred: fn(&syn::Lit) -> bool| {
+                                !elems.is_empty() && vec_lit_elems(&m.mac).map(|v| v.iter().all(|e| matches!(e, Expr::Lit(l) if pred(&l.lit)))).unwrap_or(false)
+                            };
+                            let elem_ty = match (&ann_mty, &self.f.ret_mty) {
+                                (Some(t @ MType::Named(n, _)), _) if n == "List" => t.clone(),
+                                // `let v = vec![..]; ... v`: the return type fixes the element type
+                                (None, Some(t @ MType::Named(n, _))) if n == "List" && self.f.returned.contains(&rust_name) => t.clone(),
+                                // unconstrained literals: Rust's defaults (i32 / f64); a
+                                // different later use is a Mojo type error, not a silent change
+                                (None, _) if all_lit(|l| matches!(l, syn::Lit::Int(i) if i.suffix().is_empty())) => MType::generic("List", vec![MType::named("Int32")]),
+                                (None, _) if all_lit(|l| matches!(l, syn::Lit::Float(f) if f.suffix().is_empty())) => MType::generic("List", vec![MType::named("Float64")]),
                                 _ => MType::generic("List", vec![MType::Infer]),
                             };
                             if elems.is_empty() && !matches!(&ann_mty, Some(MType::Named(n, _)) if n == "List") {
@@ -492,7 +679,7 @@ impl<'a> FileCtx<'a> {
                 };
                 let rhs = self.lower_expr(&b.right)?;
                 out.extend(self.take_pending());
-                if let Some(v) = self.generic_arith(op, &b.left, &b.right, lhs.clone(), rhs.clone()) {
+                if let Some(v) = self.generic_arith(op, &b.left, &b.right, lhs.clone(), rhs.clone())? {
                     out.push(MStmt::Assign(lhs, v));
                     return Ok(());
                 }
@@ -577,7 +764,9 @@ impl<'a> FileCtx<'a> {
                 }
                 let exp = self.f.ret_mty.clone();
                 let v = self.lower_expr_exp(e, exp.as_ref())?;
-                let v = self.maybe_transfer(e, v);
+                let v = self.transfer_returned(e, v);
+                let o = self.ref_origin(e, &v);
+                self.f.ret_origins.push(o);
                 out.extend(self.take_pending());
                 out.push(MStmt::Return(Some(v)));
                 Ok(())
@@ -1040,14 +1229,107 @@ impl<'a> FileCtx<'a> {
     pub fn maybe_transfer(&self, e: &Expr, v: MExpr) -> MExpr {
         if let Some(n) = single_ident(e) {
             if let Some(b) = self.lookup(&n) {
-                if b.transferable && b.loop_depth == self.f.loop_depth && self.f.use_counts.get(&n).copied().unwrap_or(0) == 1 {
+                let single = self.f.use_counts.get(&n).copied().unwrap_or(0) == 1;
+                let last = {
+                    use syn::spanned::Spanned;
+                    let p = e.span().start();
+                    self.f.last_use.get(&n) == Some(&(p.line, p.column)) && p.line > 0
+                };
+                if b.transferable && b.loop_depth == self.f.loop_depth && (single || last) {
                     if let MExpr::Name(_) = &v {
                         return MExpr::Transfer(Box::new(v));
                     }
                 }
             }
         }
+        // Moving a non-Copy field out of an owned value (`Buffer { data: b.data }`):
+        // Mojo 1.2 rejects the partial move ("destroyed out of the middle of a
+        // value"), so copy it; the source is never used again in Rust.
+        if let (Expr::Field(_), MExpr::Attr(..)) = (e, &v) {
+            if let Some(t) = self.type_of(e) {
+                if !matches!(t, syn::Type::Reference(_)) && !self.is_copy_rty(&t) {
+                    return MExpr::method(v, "copy", vec![]);
+                }
+            }
+        }
         v
+    }
+
+    /// `return x` ends the function, so an owned local can always be moved
+    /// out (Mojo does not move implicitly and rejects the copy for
+    /// non-`ImplicitlyCopyable` types).
+    pub fn transfer_returned(&self, e: &Expr, v: MExpr) -> MExpr {
+        if let Some(n) = single_ident(e) {
+            if let Some(b) = self.lookup(&n) {
+                if b.transferable && matches!(&v, MExpr::Name(_)) {
+                    return MExpr::Transfer(Box::new(v));
+                }
+            }
+        }
+        self.maybe_transfer(e, v)
+    }
+
+    /// The Mojo origin of a returned place: `self.f` for a field path,
+    /// `origin_of(self.f)._get_owned_interior["element"]` for a `List`
+    /// element (1.x interior origins; the stdlib's own wrappers use this
+    /// spelling), a borrowed argument's name for the argument itself.
+    fn ref_origin(&self, e: &Expr, v: &MExpr) -> Option<String> {
+        fn is_place(v: &MExpr) -> bool {
+            match v {
+                MExpr::Name(_) => true,
+                MExpr::Attr(b, _) => is_place(b),
+                _ => false,
+            }
+        }
+        let mut e = e;
+        loop {
+            match e {
+                Expr::Reference(r) => e = &r.expr,
+                Expr::Paren(p) => e = &p.expr,
+                _ => break,
+            }
+        }
+        let show = |v: &MExpr| {
+            let mut s = String::new();
+            crate::printer::write_expr(&mut s, v, 0);
+            s
+        };
+        match v {
+            MExpr::Attr(..) | MExpr::Name(_) if is_place(v) => Some(show(v)),
+            MExpr::Index(base, idx) if idx.len() == 1 && is_place(base) => {
+                let Expr::Index(ix) = e else { return None };
+                let interior = match self.recv_kind(&ix.expr) {
+                    RecvKind::Vec => "element",
+                    RecvKind::Map => "value",
+                    _ => return None,
+                };
+                Some(format!("origin_of({})._get_owned_interior[\"{}\"]", show(base), interior))
+            }
+            _ => None,
+        }
+    }
+
+    /// In a specialised impl (`impl Point<f32>`), the concrete type of a
+    /// field of `self` whose declared type is a fixed struct parameter.
+    fn specialized_field(&self, base: &Expr, member: &syn::Member) -> Option<MType> {
+        if self.ts.specialized.is_empty() {
+            return None;
+        }
+        if single_ident(base).as_deref() != Some("self") {
+            return None;
+        }
+        let sn = self.ts.self_name.as_ref()?;
+        let info = self.syms.structs.get(sn)?;
+        let key = match member {
+            syn::Member::Named(n) => n.to_string(),
+            syn::Member::Unnamed(i) => i.index.to_string(),
+        };
+        let (_, fty) = info.fields.iter().find(|(n, _)| *n == key)?;
+        let g = rty_last(fty)?;
+        if !rty_args(fty).is_empty() {
+            return None;
+        }
+        self.ts.specialized.get(&g).cloned()
     }
 
     fn lower_place(&mut self, e: &Expr) -> LResult<MExpr> {
@@ -1120,6 +1402,13 @@ impl<'a> FileCtx<'a> {
                     }
                 }
                 let base = self.lower_expr(&f.base)?;
+                if let Some(t) = self.specialized_field(&f.base, &f.member) {
+                    let fname = match &f.member {
+                        syn::Member::Named(n) => names::ident(&n.to_string()),
+                        syn::Member::Unnamed(i) => format!("_{}", i.index),
+                    };
+                    return Ok(MExpr::call(MExpr::Param(Box::new(MExpr::name("rebind")), vec![MTypeArg::Type(t)]), vec![MExpr::attr(base, &fname)]));
+                }
                 match &f.member {
                     syn::Member::Named(n) => Ok(MExpr::attr(base, &names::ident(&n.to_string()))),
                     syn::Member::Unnamed(i) => {
@@ -1807,7 +2096,7 @@ impl<'a> FileCtx<'a> {
             RB::Rem(_) => {
                 let l = self.lower_expr(&b.left)?;
                 let r = self.lower_expr(&b.right)?;
-                if let Some(v) = self.generic_arith(BinOp::Mod, &b.left, &b.right, l.clone(), r.clone()) {
+                if let Some(v) = self.generic_arith(BinOp::Mod, &b.left, &b.right, l.clone(), r.clone())? {
                     return Ok(v);
                 }
                 return Ok(self.lower_rem(&b.left, &b.right, l, r));
@@ -1839,7 +2128,7 @@ impl<'a> FileCtx<'a> {
         } else {
             self.lower_expr(&b.right)?
         };
-        if let Some(v) = self.generic_arith(op, &b.left, &b.right, l.clone(), r.clone()) {
+        if let Some(v) = self.generic_arith(op, &b.left, &b.right, l.clone(), r.clone())? {
             return Ok(v);
         }
         Ok(MExpr::bin(l, op, r))
@@ -1871,14 +2160,14 @@ impl<'a> FileCtx<'a> {
     /// `a + b` where an operand's type is a generic parameter `T`: Mojo has no
     /// arithmetic trait that the built-in scalars conform to, so dispatch
     /// through `mojo_rt.ops` (see the module docstring and MAPPING.md 6.1).
-    pub fn generic_arith(&mut self, op: BinOp, le: &Expr, re: &Expr, l: MExpr, r: MExpr) -> Option<MExpr> {
-        let f = ops_fn(op)?;
+    pub fn generic_arith(&mut self, op: BinOp, le: &Expr, re: &Expr, l: MExpr, r: MExpr) -> LResult<Option<MExpr>> {
+        let Some(f) = ops_fn(op) else { return Ok(None) };
         let lt = self.type_of(le);
         let rt = self.type_of(re);
         let lp = lt.as_ref().map(|t| self.is_param_rty(t)).unwrap_or(false);
         let rp = rt.as_ref().map(|t| self.is_param_rty(t)).unwrap_or(false);
         if !lp && !rp {
-            return None;
+            return Ok(None);
         }
         let same = match (&lt, &rt) {
             (Some(a), Some(b)) => rty_last(a) == rty_last(b),
@@ -1887,17 +2176,18 @@ impl<'a> FileCtx<'a> {
         let rhs_scalar_ok = rt.as_ref().map(|t| self.is_param_rty(t) || rty_last(t).as_deref() == Some("f32")).unwrap_or(false);
         if !same && lp && rhs_scalar_ok && matches!(op, BinOp::Mul | BinOp::Div) {
             let func = self.rt_ops(if op == BinOp::Mul { "mul_rhs" } else { "div_rhs" });
-            return Some(MExpr::call(func, vec![l, r]));
+            return Ok(Some(MExpr::call(func, vec![l, r])));
         }
         if !same {
-            self.todo(
+            // Mojo traits take no type parameters, so `T: Add<u8>` has no
+            // dispatch; the plain operator would not compile on `T`.
+            return unsup(
                 "operator on a generic parameter with a different operand type",
                 format!("`{} {} {}`: mojo_rt.ops only covers `Output = Self` operators", tokens_str(le), op.text(), tokens_str(re)),
             );
-            return None;
         }
         let func = self.rt_ops(f);
-        Some(MExpr::call(func, vec![l, r]))
+        Ok(Some(MExpr::call(func, vec![l, r])))
     }
 
     fn lower_rem(&mut self, le: &Expr, re: &Expr, l: MExpr, r: MExpr) -> MExpr {
@@ -2412,6 +2702,9 @@ impl<'a> FileCtx<'a> {
                 let r = self.lower_expr(&mc.receiver)?;
                 let args = self.lower_args(&mc.args)?;
                 if name != "get" {
+                    if self.imm_root(&mc.receiver) {
+                        return unsup("interior mutability through a shared reference (`Cell` mutated via `&`; Mojo has none)", tokens_str(mc));
+                    }
                     self.todo("Cell mutation needs `mut` access in Mojo (no interior mutability)", tokens_str(mc));
                 }
                 return match name.as_str() {
@@ -2500,7 +2793,40 @@ impl<'a> FileCtx<'a> {
         if name.starts_with("try_") {
             return unsup(format!("lock method `.{}()` (returns Option/Result of a guard)", name), tokens_str(mc));
         }
+        if matches!(mapped, "lock" | "write") && !via_rc && self.imm_root(&mc.receiver) && self.guard_mutated(mc) {
+            return unsup("interior mutability through a shared reference (lock guard written via `&self`; Mojo has none)", tokens_str(mc));
+        }
         Ok(MExpr::method(r, mapped, args))
+    }
+
+    /// Is the place `e` rooted in an immutably borrowed binding (`&self`,
+    /// a `&T` argument)? Mutation through it is Rust interior mutability,
+    /// which Mojo rejects.
+    pub fn imm_root(&self, e: &Expr) -> bool {
+        let mut e = e;
+        loop {
+            match e {
+                Expr::Field(f) => e = &f.base,
+                Expr::Index(i) => e = &i.expr,
+                Expr::Paren(p) => e = &p.expr,
+                Expr::Reference(r) => e = &r.expr,
+                Expr::Unary(u) if matches!(u.op, syn::UnOp::Deref(_)) => e = &u.expr,
+                _ => break,
+            }
+        }
+        match single_ident(e) {
+            Some(n) => self.f.imm_roots.contains(&n) && self.lookup(&n).is_some(),
+            None => false,
+        }
+    }
+
+    /// Is the guard returned by this `.lock()` / `.write()` written to? Either
+    /// directly (`m.lock().push(x)`, `*m.lock() = v`) or through a
+    /// `let g = m.lock();` binding later in the function.
+    fn guard_mutated(&self, mc: &syn::ExprMethodCall) -> bool {
+        use syn::spanned::Spanned;
+        let pos = mc.span().start();
+        self.f.mutated_guards.contains(&(pos.line, pos.column))
     }
 
     /// Is `e` a call that yields a lock guard or RefCell borrow (bound by
@@ -2528,6 +2854,9 @@ impl<'a> FileCtx<'a> {
             r = MExpr::Index(Box::new(r), vec![]);
         }
         let args = self.lower_args(&mc.args)?;
+        if matches!(name, "borrow_mut" | "replace" | "take" | "set") && self.imm_root(&mc.receiver) && !via_rc {
+            return unsup("interior mutability through a shared reference (`RefCell` mutated via `&`; Mojo has none)", tokens_str(mc));
+        }
         match name {
             "borrow" | "borrow_mut" | "replace" | "take" | "set" => {
                 self.todo("RefCell lowered to mojo_rt.cell.RefCell (no dynamic borrow checking)", tokens_str(mc));
@@ -2612,12 +2941,11 @@ impl<'a> FileCtx<'a> {
     fn collection_method(&mut self, name: &str, kind: &RecvKind, r: MExpr, args: Vec<MExpr>, mc: &syn::ExprMethodCall) -> LResult<Option<MExpr>> {
         let a = |i: usize| args[i].clone();
         Ok(Some(match (name, args.len()) {
-            ("len", 0) => {
-                if *kind == RecvKind::Str {
-                    self.todo("String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics", tokens_str(mc));
-                }
-                MExpr::call_named("len", vec![r])
-            }
+            // Rust `str::len` counts UTF-8 bytes; Mojo 1.x rejects `len(String)`
+            // as ambiguous and spells the byte count `byte_length()`.
+            ("len", 0) if *kind == RecvKind::Str => MExpr::method(r, "byte_length", vec![]),
+            ("len", 0) => MExpr::call_named("len", vec![r]),
+            ("is_empty", 0) if *kind == RecvKind::Str => MExpr::bin(MExpr::method(r, "byte_length", vec![]), BinOp::Eq, MExpr::Int("0".into())),
             ("is_empty", 0) => MExpr::bin(MExpr::call_named("len", vec![r]), BinOp::Eq, MExpr::Int("0".into())),
             ("push", 1) if *kind == RecvKind::Str => MExpr::method(r, "__iadd__", vec![MExpr::call_named("String", vec![a(0)])]),
             ("push", 1) => MExpr::method(r, "append", vec![a(0)]),

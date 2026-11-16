@@ -941,13 +941,26 @@ impl<'a> FileCtx<'a> {
             accessors.push(MMember::Method(MFunction {
                 name: format!("as_{}", vname),
                 args: vec![self_arg(Conv::Ref)],
-                ret: RetType::Ref("self".into(), ptype.clone()),
-                body: Some(vec![MStmt::Return(Some(MExpr::Param(Box::new(v_field), vec![MTypeArg::Type(ptype)])))]),
+                ret: RetType::Ref("self._v".into(), ptype.clone()),
+                // `self._v[P]` returns a reference with the Variant's interior
+                // origin, which `ref [self]` does not accept; check the tag and
+                // use `unsafe_get` (origin of `self._v`).
+                body: Some(vec![
+                    MStmt::If {
+                        arms: vec![IfArm {
+                            cond: MExpr::not(MExpr::call(MExpr::Param(Box::new(MExpr::attr(v_field.clone(), "isa")), vec![MTypeArg::Type(ptype.clone())]), vec![])),
+                            body: vec![MStmt::Expr(MExpr::call_named("abort", vec![MExpr::Str(format!("{}::{}: wrong enum variant", name, vname))]))],
+                        }],
+                        else_body: None,
+                    },
+                    MStmt::Return(Some(MExpr::call(MExpr::Param(Box::new(MExpr::attr(v_field, "unsafe_get")), vec![MTypeArg::Type(ptype)]), vec![]))),
+                ]),
                 ..Default::default()
             }));
             pre.push(pst);
         }
         self.import("std.utils", "Variant");
+        self.import("std.os", "abort");
         st.traits = payload_traits.clone();
         st.members.push(MMember::Field(MField { name: "_v".into(), ty: MType::generic("Variant", payload_types), doc: None }));
         st.members.extend(ctors);
@@ -1174,6 +1187,7 @@ impl<'a> FileCtx<'a> {
             let args: Vec<Type> = rty_args(&imp.self_ty);
             let impl_params: Vec<String> = imp.generics.type_params().map(|t| t.ident.to_string()).collect();
             let mut mapped: HashMap<String, String> = HashMap::new();
+            let mut specialized: HashMap<String, MType> = HashMap::new();
             if args.len() != decl_generics.len() {
                 setup_err = Some(Unsupported { key: "impl type arguments do not match the type's parameters".into(), detail: tokens_str(&imp.self_ty) });
             } else {
@@ -1191,6 +1205,7 @@ impl<'a> FileCtx<'a> {
                         }
                         None => match self.lower_type(a) {
                             Ok(t) => {
+                                specialized.insert(g.clone(), t.clone());
                                 wheres.push(format!("Self.{} == {}", g, crate::printer::type_str(&t)));
                                 self.todo("impl specialised on a concrete type argument", format!("method gated with `where Self.{} == {}`", g, crate::printer::type_str(&t)));
                             }
@@ -1242,6 +1257,14 @@ impl<'a> FileCtx<'a> {
                     }
                     base_ts = self.ts.clone();
                     base_ts.params = mapped;
+                    // `where Self.T == Float32` does not refine `Self.T` inside the
+                    // body (Mojo 1.2): field reads get `rebind[Float32](..)` and,
+                    // when every parameter is fixed, `Self` means the concrete type.
+                    if !specialized.is_empty() && specialized.len() == decl_generics.len() {
+                        let targs: Vec<MType> = decl_generics.iter().map(|g| specialized[g].clone()).collect();
+                        base_ts.self_concrete = Some(MType::generic(&sn, targs));
+                    }
+                    base_ts.specialized = specialized;
                 }
                 setup_todos = std::mem::take(&mut self.todos);
             }
@@ -1698,6 +1721,9 @@ impl<'a> FileCtx<'a> {
         }
         if let Some(b) = spec.block {
             self.f.use_counts = count_uses(b);
+            self.f.last_use = super::expr::last_uses(b);
+            self.f.returned = super::expr::returned_idents(b);
+            self.f.mutated_guards = super::expr::mutated_guard_calls(b);
         }
         let mut impl_trait_n = 0;
         let mut receiver_seen = false;
@@ -1742,6 +1768,9 @@ impl<'a> FileCtx<'a> {
                             } else {
                                 Conv::Default
                             };
+                            if conv == Conv::Default {
+                                self.f.imm_roots.insert("self".into());
+                            }
                             f.args.push(self_arg(conv));
                             self.bind_expr("self", MExpr::name("self"), self_rty);
                         }
@@ -1785,7 +1814,7 @@ impl<'a> FileCtx<'a> {
                         Type::TraitObject(to) => Some(&to.bounds),
                         _ => None,
                     };
-                    let (conv, mty, is_ref_ty) = if let Some(obounds) = opaque_bounds {
+                    let (mut conv, mty, is_ref_ty) = if let Some(obounds) = opaque_bounds {
                         impl_trait_n += 1;
                         let pname = format!("F{}", impl_trait_n);
                         let bound = self.lower_bounds(obounds.iter(), &pname, false)?;
@@ -1812,7 +1841,24 @@ impl<'a> FileCtx<'a> {
                         syn::Pat::Ident(pi) if pi.subpat.is_none() => {
                             let transferable = conv == Conv::Var;
                             let n = self.declare(&pi.ident.to_string(), Some(rty), is_ref_ty, transferable);
-                            f.args.push(MArg { conv, name: n, ty: Some(mty), kw_only: false });
+                            // `text: &'a T` where `'a` is a lifetime of the struct being
+                            // implemented: tie the argument to the struct's origin
+                            // parameter (`ref [Self.origin_a] text: T`) so a
+                            // `Pointer(to=text)` field initialiser has the right origin.
+                            let mut printed = n.clone();
+                            if let (Type::Reference(r), Some(sn)) = (&*pt.ty, self.ts.self_name.clone()) {
+                                if let Some(lt) = &r.lifetime {
+                                    let l = lt.ident.to_string();
+                                    if self.syms.origin_params.get(&sn).map(|os| os.contains(&l)).unwrap_or(false) && r.mutability.is_none() {
+                                        conv = Conv::Ref;
+                                        printed = format!("[Self.origin_{}] {}", l, n);
+                                    }
+                                }
+                            }
+                            if is_ref_ty && matches!(&*pt.ty, Type::Reference(r) if r.mutability.is_none()) {
+                                self.f.imm_roots.insert(pi.ident.to_string());
+                            }
+                            f.args.push(MArg { conv, name: printed, ty: Some(mty), kw_only: false });
                         }
                         syn::Pat::Wild(_) => {
                             f.args.push(MArg { conv: if conv == Conv::Var { Conv::Default } else { conv }, name: format!("_unused{}", idx), ty: Some(mty), kw_only: false });
@@ -1861,7 +1907,20 @@ impl<'a> FileCtx<'a> {
             // `return v` inside an initializer is handled as assignment to self
             self.f.ret_mty = None;
         }
+        self.f.ret_origins.clear();
         self.lower_block(block, &sink, &mut body)?;
+        // Mojo 1.x checks returned references against the declared origin
+        // exactly: `ref [self]` does not cover `self.f`, nor a list element
+        // (interior origin). Use the origin of the returned place when every
+        // return agrees.
+        if let RetType::Ref(origin, _) = &mut f.ret {
+            let os = std::mem::take(&mut self.f.ret_origins);
+            if let Some(Some(first)) = os.first() {
+                if os.iter().all(|o| o.as_ref() == Some(first)) {
+                    *origin = first.clone();
+                }
+            }
+        }
         if !self.f.pending.is_empty() {
             return unsup("internal: unflushed hoisted statements", rust_fn_name(sig));
         }

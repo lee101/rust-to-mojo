@@ -2,6 +2,7 @@
 concrete tail, and impls of local traits for primitives.
 """
 
+from std.os import abort
 from std.utils import Variant
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
@@ -45,14 +46,18 @@ struct Length(Copyable, ImplicitlyCopyable, Writable, Equatable):
     def isa_Px(self) -> Bool:
         return self._v.isa[Length_Px]()
 
-    def as_Px(ref self) -> ref [self] Length_Px:
-        return self._v[Length_Px]
+    def as_Px(ref self) -> ref [self._v] Length_Px:
+        if not self._v.isa[Length_Px]():
+            abort("Length::Px: wrong enum variant")
+        return self._v.unsafe_get[Length_Px]()
 
     def isa_Rem(self) -> Bool:
         return self._v.isa[Length_Rem]()
 
-    def as_Rem(ref self) -> ref [self] Length_Rem:
-        return self._v[Length_Rem]
+    def as_Rem(ref self) -> ref [self._v] Length_Rem:
+        if not self._v.isa[Length_Rem]():
+            abort("Length::Rem: wrong enum variant")
+        return self._v.unsafe_get[Length_Rem]()
 
 def px_len(v: Float32) -> Length:
     return Length.Px(Pixels.from_(v))
@@ -94,11 +99,10 @@ def Half_f32_half(self: Float32) -> Float32:
 # --- end original Rust ---
 
 # TODO(rust-to-mojo): `Option<&T>` lowered to `Optional[T]` (copies the referent) -- Option<&String>
-# TODO(rust-to-mojo): String len(): Rust counts UTF-8 bytes; verify Mojo String len semantics -- l.len()
 def label_len(label: Optional[String]) -> Int:
     """`Option<&T>` arguments become `Optional[T]` (a copy of the referent)."""
     if label is not None:
         ref l = label.value()
-        return len(l)
+        return l.byte_length()
     else:
         return 0

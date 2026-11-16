@@ -87,7 +87,7 @@ trait RArith(RAdd, RSub, RMul, RDiv, RNeg):
 
 
 @always_inline
-def add[T: Copyable](a: T, b: T) -> T:
+def add[T: Copyable & Deinitable](a: T, b: T) -> T:
     """Rust `a + b` where `T: Add<Output = T>`."""
     comptime if conforms_to(T, RAdd):
         return a + b
@@ -129,10 +129,9 @@ def add[T: Copyable](a: T, b: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no `+` (Rust bound `Add<Output = T>`); conform it to mojo_rt.ops.RAdd"
-        return a.copy()
 
 @always_inline
-def sub[T: Copyable](a: T, b: T) -> T:
+def sub[T: Copyable & Deinitable](a: T, b: T) -> T:
     """Rust `a - b` where `T: Sub<Output = T>`."""
     comptime if conforms_to(T, RSub):
         return a - b
@@ -174,10 +173,9 @@ def sub[T: Copyable](a: T, b: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no `-` (Rust bound `Sub<Output = T>`); conform it to mojo_rt.ops.RSub"
-        return a.copy()
 
 @always_inline
-def mul[T: Copyable](a: T, b: T) -> T:
+def mul[T: Copyable & Deinitable](a: T, b: T) -> T:
     """Rust `a * b` where `T: Mul<Output = T>`."""
     comptime if conforms_to(T, RMul):
         return a * b
@@ -219,10 +217,9 @@ def mul[T: Copyable](a: T, b: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no `*` (Rust bound `Mul<Output = T>`); conform it to mojo_rt.ops.RMul"
-        return a.copy()
 
 @always_inline
-def div[T: Copyable](a: T, b: T) -> T:
+def div[T: Copyable & Deinitable](a: T, b: T) -> T:
     """Rust `a / b` where `T: Div<Output = T>`."""
     comptime if conforms_to(T, RDiv):
         return a / b
@@ -264,10 +261,9 @@ def div[T: Copyable](a: T, b: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no `/` (Rust bound `Div<Output = T>`); conform it to mojo_rt.ops.RDiv"
-        return a.copy()
 
 @always_inline
-def rem[T: Copyable](a: T, b: T) -> T:
+def rem[T: Copyable & Deinitable](a: T, b: T) -> T:
     """Rust `a % b` where `T: Rem<Output = T>`."""
     comptime if conforms_to(T, RRem):
         return a % b
@@ -309,11 +305,10 @@ def rem[T: Copyable](a: T, b: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no `%` (Rust bound `Rem<Output = T>`); conform it to mojo_rt.ops.RRem"
-        return a.copy()
 
 
 @always_inline
-def neg[T: Copyable](a: T) -> T:
+def neg[T: Copyable & Deinitable](a: T) -> T:
     """Rust `-a` where `T: Neg<Output = T>`."""
     comptime if conforms_to(T, RNeg):
         return -a
@@ -355,7 +350,6 @@ def neg[T: Copyable](a: T) -> T:
         return rebind[T](r).copy()
     else:
         comptime assert False, "rust-to-mojo: type parameter has no unary `-` (Rust bound `Neg<Output = T>`); conform it to mojo_rt.ops.RNeg"
-        return a.copy()
 
 
 # ---- heterogeneous `T * S` / `T / S` (Rust `T: Mul<S, Output = T>`) ---------
@@ -381,7 +375,7 @@ trait RDivF32:
 
 
 @always_inline
-def mul_rhs[T: Copyable, S: Copyable](a: T, b: S) -> T:
+def mul_rhs[T: Copyable & Deinitable, S: Copyable & Deinitable](a: T, b: S) -> T:
     """Rust `a * b` where `T: Mul<S, Output = T>`."""
     comptime if T == S:
         return mul(a, rebind[T](b).copy())
@@ -389,10 +383,9 @@ def mul_rhs[T: Copyable, S: Copyable](a: T, b: S) -> T:
         return a * rebind[Float32](b)
     else:
         comptime assert False, "rust-to-mojo: no `*` between these types (Rust bound `Mul<S, Output = T>`); conform T to mojo_rt.ops.RMulF32 or port by hand"
-        return a.copy()
 
 @always_inline
-def div_rhs[T: Copyable, S: Copyable](a: T, b: S) -> T:
+def div_rhs[T: Copyable & Deinitable, S: Copyable & Deinitable](a: T, b: S) -> T:
     """Rust `a / b` where `T: Div<S, Output = T>`."""
     comptime if T == S:
         return div(a, rebind[T](b).copy())
@@ -400,4 +393,3 @@ def div_rhs[T: Copyable, S: Copyable](a: T, b: S) -> T:
         return a / rebind[Float32](b)
     else:
         comptime assert False, "rust-to-mojo: no `/` between these types (Rust bound `Div<S, Output = T>`); conform T to mojo_rt.ops.RDivF32 or port by hand"
-        return a.copy()

@@ -7,7 +7,7 @@ def wrap(var data: List[UInt8], var name: String) -> Buffer:
     return Buffer(data=data^, name=name^)
 
 def rename(var b: Buffer, var name: String) -> Buffer:
-    return Buffer(data=b.data, name=name^)
+    return Buffer(data=b.data.copy(), name=name^)
 
 def shadow(x: Int32) -> Int32:
     var x_1 = x + 1
@@ -18,5 +18,5 @@ def shadow(x: Int32) -> Int32:
 
 def takes_twice(var v: List[UInt8]) -> Int:
     var n = len(v)
-    var w = v
+    var w = v^
     return n + len(w)

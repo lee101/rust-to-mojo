@@ -68,6 +68,17 @@ pub struct FnState {
     pub returns_option: bool,
     /// Number of uses of each Rust identifier in the body (for `^`).
     pub use_counts: HashMap<String, usize>,
+    /// Position of the last use of each Rust identifier (see `last_uses`).
+    pub last_use: HashMap<String, (usize, usize)>,
+    /// Identifiers the body returns (tail or `return x`).
+    pub returned: HashSet<String>,
+    /// For `-> ref [o] T` functions: the origin of each returned place
+    /// (`None` when it cannot be named).
+    pub ret_origins: Vec<Option<String>>,
+    /// Rust bindings that are immutable borrows (`&self`, `&T` arguments).
+    pub imm_roots: HashSet<String>,
+    /// Guard calls whose result is written (see `mutated_guard_calls`).
+    pub mutated_guards: HashSet<(usize, usize)>,
     pub loop_depth: usize,
     /// Statements hoisted in front of the statement being lowered.
     pub pending: Vec<MStmt>,
@@ -99,6 +110,9 @@ pub struct TypeScope {
     pub assoc: HashMap<String, syn::Type>,
     /// Lowering an impl for a foreign type as free functions: what `Self` means.
     pub self_concrete: Option<MType>,
+    /// Struct parameters fixed by a specialised impl (`impl Point<f32>`):
+    /// declared parameter name -> concrete Mojo type.
+    pub specialized: HashMap<String, MType>,
 }
 
 pub struct FileCtx<'a> {

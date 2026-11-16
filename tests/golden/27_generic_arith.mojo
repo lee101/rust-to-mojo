@@ -53,8 +53,11 @@ struct Point[T: Copyable & Defaultable & Deinitable](ImplicitlyCopyable where co
 def double[T: ImplicitlyCopyable & Deinitable](var v: T) -> T:
     return ops.add(v, v)
 
-# TODO(rust-to-mojo): dropped bound `Add` (no Mojo std trait) -- `T: Add<u8, Output = T>`: operators on generic params need a user trait or DType parameterisation
-# TODO(rust-to-mojo): operator on a generic parameter with a different operand type -- `v + 1u8`: mojo_rt.ops only covers `Output = Self` operators
-def bump[T: Movable & Deinitable](var v: T) -> T:
-    """Heterogeneous `Add<u8>`: no dispatch trait, stays a TODO."""
-    return v + UInt8(1)
+# TODO(rust-to-mojo): fn `bump` not translated: operator on a generic parameter with a different operand type (`v + 1u8`: mojo_rt.ops only covers `Output = Self` operators)
+# signature hint: def bump[T: Movable & Deinitable](var v: T) -> T
+# --- original Rust ---
+# /// Heterogeneous `Add<u8>`: no dispatch trait, stays a TODO.
+# pub fn bump<T: Add<u8, Output = T>>(v: T) -> T {
+#     v + 1u8
+# }
+# --- end original Rust ---
