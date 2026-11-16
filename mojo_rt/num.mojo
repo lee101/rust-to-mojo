@@ -4,6 +4,7 @@ Every function is generic over `Scalar[dtype]`; in Mojo 1.0 `Int` is
 `Scalar[DType.int]`, so the same helpers cover `Int`, `Int32`, `Float32`, ...
 """
 
+from std.bit import pop_count, count_leading_zeros, count_trailing_zeros
 from std.math import trunc, copysign
 # Location of the NaN/inf helpers is unverified for 1.0 (std.utils.numerics in 25.x).
 from std.utils.numerics import isnan, isinf, inf, nan
@@ -244,31 +245,14 @@ def saturating_mul[dtype: DType](a: Scalar[dtype], b: Scalar[dtype]) -> Scalar[d
 
 
 # ---- bit counting -------------------------------------------------------------------
-# std.bit names are unverified for 1.0; these loops are slow but obviously correct.
 
 def count_ones[dtype: DType](x: Scalar[dtype]) -> UInt32:
-    var n = UInt32(0)
-    for i in range(dtype.bit_width()):
-        if (x >> Scalar[dtype](i)) & 1 != 0:
-            n += 1
-    return n
+    return UInt32(Int(pop_count(x)))
 
 
 def leading_zeros[dtype: DType](x: Scalar[dtype]) -> UInt32:
-    var n = UInt32(0)
-    var w = dtype.bit_width()
-    for k in range(w):
-        var i = w - 1 - k
-        if (x >> Scalar[dtype](i)) & 1 != 0:
-            break
-        n += 1
-    return n
+    return UInt32(Int(count_leading_zeros(x)))
 
 
 def trailing_zeros[dtype: DType](x: Scalar[dtype]) -> UInt32:
-    var n = UInt32(0)
-    for i in range(dtype.bit_width()):
-        if (x >> Scalar[dtype](i)) & 1 != 0:
-            break
-        n += 1
-    return n
+    return UInt32(Int(count_trailing_zeros(x)))

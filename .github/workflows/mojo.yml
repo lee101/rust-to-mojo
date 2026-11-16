@@ -32,6 +32,9 @@ jobs:
         run: cargo test
       - name: Compile mojo_rt and goldens
         run: bash scripts/ci_mojo.sh mojo-logs/compile
+      - name: Syntax probes (informational)
+        if: always()
+        run: bash scripts/ci_probe.sh mojo-logs/probe
       - name: Runtime diff (Mojo vs Rust)
         if: always()
         run: bash scripts/ci_runtime.sh mojo-logs/runtime
@@ -42,6 +45,9 @@ jobs:
             echo "### Mojo ${MOJO_VERSION} compile";
             echo '| file | status |'; echo '| --- | --- |';
             awk -F'\t' '{print "| " $1 " | " $2 " |"}' mojo-logs/compile/summary.tsv 2>/dev/null;
+            echo; echo "### Probes";
+            echo '| probe | status |'; echo '| --- | --- |';
+            awk -F'	' '{print "| " $1 " | " $2 " |"}' mojo-logs/probe/summary.tsv 2>/dev/null;
             echo; echo "### Runtime diff";
             echo '| test | status |'; echo '| --- | --- |';
             awk -F'\t' '{print "| " $1 " | " $2 " |"}' mojo-logs/runtime/summary.tsv 2>/dev/null;
