@@ -22,7 +22,7 @@ struct Pixels(ImplicitlyCopyable, Equatable, Writable, Defaultable, RAdd, RSub, 
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Point[T: Copyable & Defaultable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable where conforms_to(T, Equatable), Writable where conforms_to(T, Writable), Defaultable, RAdd, RNeg):
+struct Point[T: Copyable & Defaultable & Deinitable](Copyable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable where conforms_to(T, Equatable), Writable where conforms_to(T, Writable), Defaultable, RAdd, RNeg):
     var x: Self.T
     var y: Self.T
 

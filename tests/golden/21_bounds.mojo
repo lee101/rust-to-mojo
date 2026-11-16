@@ -3,7 +3,7 @@ from mojo_rt.ops import RAdd
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable, RAdd):
+struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable, RAdd):
     var x: Self.T
     var y: Self.T
 
@@ -16,7 +16,7 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable):
+struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable):
     var width: Self.T
     var height: Self.T
 
@@ -26,7 +26,7 @@ struct Size[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impli
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable):
+struct Bounds[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Writable, Defaultable):
     var origin: Point[Self.T]
     var size: Size[Self.T]
 

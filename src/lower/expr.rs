@@ -255,6 +255,14 @@ pub fn mutated_guard_calls(block: &syn::Block) -> HashSet<(usize, usize)> {
     v.out
 }
 
+/// `T` for a single-segment, argument-less type path.
+fn single_seg(t: &syn::Type) -> Option<String> {
+    match t {
+        syn::Type::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].arguments.is_empty() => Some(p.path.segments[0].ident.to_string()),
+        _ => None,
+    }
+}
+
 /// Rust iterator/closure-based methods we do not lower yet.
 const ITER_METHODS: &[&str] = &[
     "iter", "iter_mut", "into_iter", "map", "filter", "filter_map", "flat_map", "flatten", "fold", "reduce", "collect",
@@ -1239,6 +1247,16 @@ impl<'a> FileCtx<'a> {
                     if let MExpr::Name(_) = &v {
                         return MExpr::Transfer(Box::new(v));
                     }
+                }
+            }
+        }
+        // A derive(Copy) generic struct is only `ImplicitlyCopyable` when its
+        // parameter is; `Point<T>` with `T: Clone` needs an explicit copy where
+        // Rust copies implicitly.
+        if matches!(&v, MExpr::Name(_) | MExpr::Attr(..)) {
+            if let Some(t) = self.type_of(e) {
+                if !matches!(t, syn::Type::Reference(_)) && self.cond_copy_rty(&t) {
+                    return MExpr::method(v, "copy", vec![]);
                 }
             }
         }
@@ -3005,6 +3023,50 @@ impl<'a> FileCtx<'a> {
     // Light type inference
     // ======================================================================
 
+    /// Return type of a crate method call, with the impl's type parameters
+    /// substituted from the receiver's type (`self.top()` on `Bounds<T>`
+    /// gives `T`; `-> Self` gives the receiver type).
+    fn user_method_ret(&self, mc: &syn::ExprMethodCall) -> Option<syn::Type> {
+        use syn::visit_mut::VisitMut;
+        let recv_t = self.type_of(&mc.receiver)?;
+        let recv_t = strip_ref(&recv_t).clone();
+        let owner = rty_last(&recv_t)?;
+        let (owner, recv_t) = if owner == "Self" {
+            (self.ts.self_name.clone()?, self.ts.self_rty.clone().unwrap_or(recv_t))
+        } else {
+            (owner, recv_t)
+        };
+        let sig = self.find_sig(&mc.method.to_string(), Some(&owner), mc.args.len(), true)?;
+        if !sig.sig.generics.params.is_empty() {
+            return None;
+        }
+        let syn::ReturnType::Type(_, rt) = &sig.sig.output else { return None };
+        let mut rt = strip_ref(rt).clone();
+        let mut map: HashMap<String, syn::Type> = HashMap::new();
+        if let Some(st) = &sig.self_ty {
+            for (p, a) in rty_args(st).iter().zip(rty_args(&recv_t)) {
+                if let Some(n) = single_seg(p) {
+                    map.insert(n, a);
+                }
+            }
+        }
+        map.insert("Self".into(), recv_t.clone());
+        struct Sub<'m>(&'m HashMap<String, syn::Type>);
+        impl VisitMut for Sub<'_> {
+            fn visit_type_mut(&mut self, t: &mut syn::Type) {
+                if let Some(n) = single_seg(t) {
+                    if let Some(r) = self.0.get(&n) {
+                        *t = r.clone();
+                        return;
+                    }
+                }
+                syn::visit_mut::visit_type_mut(self, t);
+            }
+        }
+        Sub(&map).visit_type_mut(&mut rt);
+        Some(rt)
+    }
+
     pub fn type_of(&self, e: &Expr) -> Option<syn::Type> {
         match e {
             Expr::Paren(p) => self.type_of(&p.expr),
@@ -3116,7 +3178,7 @@ impl<'a> FileCtx<'a> {
                             None
                         }
                     }
-                    _ => None,
+                    _ => self.user_method_ret(mc),
                 }
             }
             Expr::Call(c) => {

@@ -1927,6 +1927,16 @@ impl<'a> FileCtx<'a> {
         while matches!(body.last(), Some(MStmt::Return(None))) {
             body.pop();
         }
+        // In a fully specialised impl (`impl Size<Length>`), `Self(..)` /
+        // `Self.f(..)` must name the concrete instantiation: the struct's own
+        // `Self` is `Size[T]` with `T` unrefined by the `where` clause.
+        if let (Some(c), false) = (self.ts.self_concrete.clone(), self.ts.specialized.is_empty()) {
+            crate::ir::rewrite_exprs(&mut body, &|e: &mut MExpr| {
+                if matches!(e, MExpr::Name(n) if n == "Self") {
+                    *e = MExpr::Type(c.clone());
+                }
+            });
+        }
         f.body = Some(body);
         Ok(())
     }
@@ -2071,6 +2081,37 @@ impl<'a> FileCtx<'a> {
         } else {
             Some(t)
         }
+    }
+
+    /// A `derive(Copy)` generic struct instantiated with a type parameter
+    /// (`Point<T>`, or `Self` inside `impl<T> Point<T>`): Copy in Rust only
+    /// when `T` is, so Mojo makes it `ImplicitlyCopyable` conditionally and
+    /// a by-value use needs `.copy()`.
+    pub fn cond_copy_rty(&self, t: &Type) -> bool {
+        let Some(n) = rty_last(t) else { return false };
+        let n = if n == "Self" {
+            if self.ts.self_concrete.is_some() {
+                return false;
+            }
+            match &self.ts.self_name {
+                Some(s) => {
+                    let generic = self.syms.structs.get(s).map(|i| !i.generics.is_empty()).unwrap_or(false);
+                    return generic && self.syms.copy_types.contains(s);
+                }
+                None => return false,
+            }
+        } else {
+            n
+        };
+        if !self.syms.copy_types.contains(&n) {
+            return false;
+        }
+        let Some(info) = self.syms.structs.get(&n) else { return false };
+        if info.generics.is_empty() {
+            return false;
+        }
+        let args = rty_args(t);
+        args.is_empty() || args.iter().any(|a| !self.is_copy_rty(a) || self.cond_copy_rty(a))
     }
 
     pub fn is_copy_rty(&self, t: &Type) -> bool {

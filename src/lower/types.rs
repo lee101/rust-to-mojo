@@ -484,6 +484,22 @@ impl<'a> FileCtx<'a> {
                         // when the generic is instantiated (see MAPPING.md 6.1).
                         continue;
                     }
+                    if names::op_trait(&n).is_some() {
+                        // `T: Mul<Rhs, Output = Rhs>`: the result is not `T`, and
+                        // `mojo_rt.ops` can only return `T`.
+                        let out_ty = match &last.arguments {
+                            syn::PathArguments::AngleBracketed(a) => a.args.iter().find_map(|g| match g {
+                                syn::GenericArgument::AssocType(at) if at.ident == "Output" => Some(tokens_str(&at.ty)),
+                                _ => None,
+                            }),
+                            _ => None,
+                        };
+                        if let Some(o) = out_ty {
+                            if o != owner && o != "Self" && !owner.ends_with(&format!(".{}", o)) {
+                                return unsup("operator bound whose `Output` is not the parameter itself", format!("{}: {}", owner, tokens_str(&tb.path)));
+                            }
+                        }
+                    }
                     if names::op_trait(&n).is_some() || ["Sum", "Product", "Into", "From", "AsRef", "Borrow", "Neg", "Zero", "One"].contains(&n.as_str()) {
                         self.todo(
                             format!("dropped bound `{}` (no Mojo std trait)", n),

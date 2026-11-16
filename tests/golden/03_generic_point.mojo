@@ -2,7 +2,7 @@ from std.math import sqrt
 
 # NOTE(rust-to-mojo): derive(Debug) -> Writable (reflection-based output; format differs from Rust's Debug)
 @fieldwise_init
-struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), Writable, Defaultable):
+struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Copyable, ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable), Equatable, Hashable where conforms_to(T, Hashable), Writable, Defaultable):
     var x: Self.T
     var y: Self.T
 

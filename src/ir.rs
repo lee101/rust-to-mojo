@@ -401,3 +401,89 @@ pub struct MModule {
     pub imports: BTreeSet<MImport>,
     pub items: Vec<MItem>,
 }
+
+/// Apply `f` bottom-up to every expression in `stmts` (nested functions
+/// included). Used for whole-body rewrites after lowering.
+pub fn rewrite_exprs(stmts: &mut [MStmt], f: &dyn Fn(&mut MExpr)) {
+    fn ex(e: &mut MExpr, f: &dyn Fn(&mut MExpr)) {
+        match e {
+            MExpr::Bin(a, _, b) => {
+                ex(a, f);
+                ex(b, f);
+            }
+            MExpr::Unary(_, a) | MExpr::Attr(a, _) | MExpr::Transfer(a) => ex(a, f),
+            MExpr::Call(c, args) => {
+                ex(c, f);
+                for a in args {
+                    ex(&mut a.value, f);
+                }
+            }
+            MExpr::Index(b, ix) => {
+                ex(b, f);
+                for i in ix {
+                    ex(i, f);
+                }
+            }
+            MExpr::Slice(a, b) => {
+                if let Some(a) = a {
+                    ex(a, f);
+                }
+                if let Some(b) = b {
+                    ex(b, f);
+                }
+            }
+            MExpr::Param(b, args) => {
+                ex(b, f);
+                for a in args {
+                    if let MTypeArg::Expr(e) = a {
+                        ex(e, f);
+                    }
+                }
+            }
+            MExpr::Tuple(v) | MExpr::List(v) => {
+                for x in v {
+                    ex(x, f);
+                }
+            }
+            MExpr::Ternary(a, b, c) => {
+                ex(a, f);
+                ex(b, f);
+                ex(c, f);
+            }
+            _ => {}
+        }
+        f(e);
+    }
+    for s in stmts {
+        match s {
+            MStmt::Var { init: Some(e), .. } | MStmt::Expr(e) | MStmt::Return(Some(e)) | MStmt::Raise(e) => ex(e, f),
+            MStmt::Assign(a, b) | MStmt::AugAssign(a, _, b) => {
+                ex(a, f);
+                ex(b, f);
+            }
+            MStmt::If { arms, else_body } => {
+                for a in arms {
+                    ex(&mut a.cond, f);
+                    rewrite_exprs(&mut a.body, f);
+                }
+                if let Some(b) = else_body {
+                    rewrite_exprs(b, f);
+                }
+            }
+            MStmt::While(c, b) => {
+                ex(c, f);
+                rewrite_exprs(b, f);
+            }
+            MStmt::For { iter, body, .. } => {
+                ex(iter, f);
+                rewrite_exprs(body, f);
+            }
+            MStmt::NestedFn(nf) => {
+                if let Some(b) = &mut nf.body {
+                    rewrite_exprs(b, f);
+                }
+            }
+            _ => {}
+        }
+    }
+}

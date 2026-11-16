@@ -33,6 +33,12 @@ impl<'a> FileCtx<'a> {
     ) -> LResult<()> {
         let has = |d: &str| derives.iter().any(|x| x == d);
         if has("Copy") {
+            // `ImplicitlyCopyable where conforms_to(T, ImplicitlyCopyable)` alone
+            // leaves the struct not even `Copyable` for a `T: Clone` parameter;
+            // Rust's derive(Clone) still holds there.
+            if has("Clone") && !generics.is_empty() {
+                self.conform(st, "Copyable", generics, param_traits);
+            }
             self.conform(st, "ImplicitlyCopyable", generics, param_traits);
         } else if has("Clone") {
             self.conform(st, "Copyable", generics, param_traits);
