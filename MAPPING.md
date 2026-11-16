@@ -90,11 +90,14 @@ need a fix.
 | `Range<T>` (as a value) | `mojo_rt.range.RustRange[T]` | shim | |
 | `Cow<str>` | `String` + TODO | lowered | |
 | `PhantomData<T>` field | dropped + TODO | lowered | |
-| `&'a T` struct field | none | unsupported | needs `Pointer[T, origin]` and origin parameters |
+| `&'a T` struct field (struct has lifetime `'a`) | `var f: Pointer[T, Self.origin_a]` with struct parameter `origin_a: ImmOrigin` (`MutOrigin` for `&'a mut`) | lowered | reads become `self.f[]`; a struct literal stores `Pointer(to=x)` (+TODO: the origin must be inferable at the call site); reassigning the field is stubbed. Other modules write `Foo[_]` for the origin. This is the 1.0 rule: "struct fields can no longer hide `UnsafeAnyOrigin`; add an `Origin` parameter instead" |
+| `&'static T` / `&'static [T]` field | `T` / `List[T]` by value | lowered | + TODO: a copy of immutable static data (no address identity) |
+| field whose type has no Mojo form (`Rc<dyn Trait>`, `Box<dyn Fn>`, unmapped std types, `&'a [T]`, ...) | `var f: Erased` (`mojo_rt.erased`) | shim | **the struct and every method that does not touch `f` still translate.** Code that reads, writes, destructures or constructs `f` is stubbed with "uses a field erased to `Erased` (cause: ...)". When the receiver's type is unknown, any erased field name counts (conservative) |
 | raw pointers | none | unsupported | |
-| `dyn Trait` | none | unsupported | Mojo 1.0 has no existential types |
+| `dyn Trait` (value, return, generic argument) | none | unsupported | Mojo 1.0 has no existential types |
+| `&dyn Trait` / `&mut dyn Trait` argument (crate trait or `Fn*`) | generic parameter (`Some[Trait]` / `F: def(..)`) | lowered | static dispatch is observably the same for the callee; `dyn Any` stays unsupported |
 | `impl Trait` (argument) | `Some[Trait]`, or a generic closure parameter | lowered | |
-| `impl Trait` (return) | none | unsupported | |
+| `impl Trait` (return) | the concrete type of the body's tail | lowered | only when the tail is a non-generic crate struct/enum (literal, constructor, or a crate fn returning one) and there is no early `return`; otherwise unsupported |
 | `fn(A) -> B` | `def(A) -> B` | direct | |
 
 ## 3. Ownership, borrowing and argument conventions
@@ -164,7 +167,7 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 | `fn new(..) -> Self` | `@staticmethod def new(..) -> Self` | direct |
 | `impl S<f32> { ... }` | methods with `where Self.T == Float32` | lowered (+TODO; 1.0 type equality is `==`) |
 | `impl<T: Extra> S<T>` | methods with `where conforms_to(Self.T, Extra)` | lowered |
-| impl in another module | none | unsupported (cross-file merge is planned) |
+| impl in another module of the crate | merged into the struct in the defining module | lowered: lowered with the impl module's `use` context; names the impl module defines are imported; the original module keeps a NOTE. Only for type names unique in the crate |
 | recursive struct (even via `Option`/`Box`) | none | unsupported (Mojo rejects it; needs pointers) |
 
 ## 6. Traits, generics and derives
@@ -185,9 +188,9 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 | `Debug` / `Display` bound | `Writable` | lowered | |
 | `PartialEq`/`Eq`, `PartialOrd`/`Ord`, `Hash`, `Default` | `Equatable`, `Comparable`, `Hashable`, `Defaultable` | direct | |
 | `Send`, `Sync`, `Sized`, `Unpin` | dropped | direct | |
-| `Add<Output = T>` and other operator bounds | dropped + TODO | lowered | **no std arithmetic trait in Mojo**. The Mojo idiom is `[dtype: DType]` with `Scalar[dtype]` fields; the optimisation pass flags these |
+| `T: Add<Output = T>` (also `Sub`, `Mul`, `Div`, `Rem`, `Neg`, `*Assign`; `Mul<S, Output = T>`) | bound not written; `a + b` on `T` becomes `ops.add(a, b)` | shim | see 6.1. Other heterogeneous bounds (`Add<u8, Output = T>`) stay dropped + TODO |
 | blanket `impl<T: X> Y for T` | none | unsupported | |
-| `impl LocalTrait for f32` / foreign types | none | unsupported | Mojo has no extensions |
+| `impl LocalTrait for f32` / for a type from another crate | free functions `Trait_f32_method(self: Float32, ...)` | lowered | + TODO: Mojo has no extensions, so method-syntax call sites are not rewritten and the type does not conform to the trait |
 | `impl ForeignTrait for Local` | none | unsupported | the trait must be ported |
 | `#[derive(Clone)]` / `Copy` | `Copyable` / `ImplicitlyCopyable` | direct | conditional on generic params via `where conforms_to(...)` |
 | `#[derive(PartialEq, Eq, Hash)]` | `Equatable`, `Hashable` | direct | 1.0 provides reflection-based defaults |
@@ -196,6 +199,39 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 | `#[derive(PartialOrd, Ord)]` | `Comparable` + lexicographic `__lt__/__le__/__gt__/__ge__` | direct | |
 | derive_more `Add, Sub, Neg, Mul, Div, *Assign` | field-wise dunders | direct | |
 | `Serialize`, `Deserialize`, `JsonSchema`, `Refineable`, ... | dropped + TODO | unsupported | |
+
+### 6.1 Generic arithmetic (`mojo_rt.ops`)
+
+GPUI's geometry is generic over the unit: `Point<T>`, `Size<T>`, `Bounds<T>` are
+instantiated with `Pixels`, `ScaledPixels`, `DevicePixels`, `Rems`, and with `f32`
+(54 uses of `Point<f32>` in the crate), and their methods do `self.origin.x + self.size.width`
+under `T: Add<Output = T>`. Mojo 1.0 has no std arithmetic trait, and the built-in
+scalars cannot be made to conform to a user trait: retroactive conformance
+("struct extensions") is only a forum proposal, not documented for 1.0.
+
+| option | how | verdict |
+| --- | --- | --- |
+| (a) user trait bound | `mojo_rt.ops.RAdd`, ... with `T: RAdd` on the Mojo parameter | rejected as the *only* mechanism: `Point[Float32]` would not instantiate, because `Float32` cannot conform |
+| (b) DType parameter | `Point[dtype: DType]` with `Scalar[dtype]` fields | rejected for translation: it changes GPUI's API (`Point<Pixels>` has no DType) and loses the unit newtypes' type safety. Kept as the `--optimize-hints` `dtype-param` suggestion for hand-optimised kernels |
+| (c) **compile-time dispatch** (chosen) | `ops.add[T: Copyable](a, b) -> T`: `comptime if conforms_to(T, RAdd)` calls the operator through the trait; `elif T == Float32` (and the other built-in numeric types, `Int` included) rebinds to the scalar and uses the built-in operator; `else: comptime assert False, ...` | works for both user newtypes and built-ins, keeps the generated signatures identical to Rust's, and still rejects a missing operator at compile time (at instantiation instead of declaration) |
+
+What the translator does:
+
+* A bound `T: Add<Output = T>` (or `Add<T, Output = T>`, `AddAssign`, `Neg<Output = T>`, ...)
+  is accepted without a TODO and not written on the Mojo parameter.
+* `a + b`, `a += b` and `-a` whose operand's Rust type is a generic parameter become
+  `ops.add(a, b)`, `a = ops.add(a, b)` and `ops.neg(a)` (`from mojo_rt import ops`).
+  `%` uses `ops.rem`, which keeps Rust's truncated remainder for built-in scalars.
+* `impl Add for X` with `Rhs = Self` and `Output = Self` (or `derive_more` `Add`/`Sub`/`Neg`)
+  adds the conformance `RAdd` (`RSub`, `RMul`, `RDiv`, `RRem`, `RNeg`) to `X`, so a
+  translated `Pixels` takes the trait branch of the dispatch. The conformance is only
+  added when the generated dunder takes `rhs: Self` by the default convention.
+* `T * S` / `T / S` under `T: Mul<S, Output = T>` (S a type parameter or `f32`) becomes
+  `ops.mul_rhs(a, b)` / `ops.div_rhs(a, b)`, which handles `S == T` and `S == Float32` with
+  `T: RMulF32` / `RDivF32` (added for `impl Mul<f32, Output = Self> for X`). This is GPUI's
+  "scale a unit type by f32" pattern.
+* Any other heterogeneous operator (`T: Add<u8, Output = T>`) stays a plain operator with a
+  TODO: Mojo traits take no type parameters, so `Add<Rhs>` has no general dispatch trait.
 
 ### Trait impls that become dunders
 
@@ -210,7 +246,7 @@ struct Point[T: Copyable & Writable & Defaultable & Equatable & Deinitable](Impl
 | `Debug::fmt` | `write_repr_to` | lowered |
 | `Default::default` | `@staticmethod default()` + `__init__(out self)` | direct |
 | `From<A>::from` | `@staticmethod from_(value: A) -> Self`; `B::from(a)` becomes `B.from_(a)` | lowered |
-| `.into()` with a known target type | `Target.from_(x)` / `Target(x)` | lowered |
+| `.into()` with a known target type | `Target.from_(x)` / `Target(x)` | lowered | target from the `let` annotation, the return type, a struct-literal field, an enum-variant payload type, or the parameter type of a crate function/method being called |
 | `Index::index` | `__getitem__(self, i) -> ref [self] T` | direct |
 | `Hash`, `PartialOrd::partial_cmp`, `Ord::cmp`, `Iterator`, `Deref`, `IndexMut`, `IntoIterator`, `FromStr`, ... | none | unsupported (planned) |
 
@@ -302,8 +338,11 @@ bindings.
 | Rust | Mojo | status | notes |
 | --- | --- | --- | --- |
 | closure with typed params and return type | nested `def` with a capture list `{imm k}` (`{var k}` for `move`), hoisted before the statement | direct | |
-| closure with untyped params | none | unsupported | needs type inference (the #1 planned improvement) |
+| closure with untyped params | parameter types from the call site | lowered | the callee's parameter is `impl Fn(A) -> R`, `F` with `F: Fn(A) -> R` (inline or `where`), `&dyn Fn(A)` or `Box<dyn Fn(A)>`, in a crate fn/method found by name (+ receiver type, + arity); impl-level parameters are substituted from the receiver's type. `Option<T>` combinators give `T`. `|&x|` binds the pointee. Otherwise unsupported |
+| closure without a return annotation | from the callee signature, else the type of a single-expression body or block tail, else `()` when the body is a block with no tail and no `return value` | lowered | |
 | `F: Fn(A) -> B` parameter | `F: def(A) -> B` | direct | |
+| `F: Fn(&mut A)` | `F: def(mut A)` | direct | the closure gets a `mut a: A` parameter (form as in std's `def(mut Bencher)`) |
+| `opt.map(f)`, `and_then`, `unwrap_or_else`, `or_else`, `map_or`, `filter`, `is_some_and`, `is_none_or`, `inspect` | `rt_option.map(opt, f)` ... (`from mojo_rt import option as rt_option`) | shim | |
 | `FnMut` | `def(...)` + TODO | lowered | captures need `{mut x}` |
 | `Box<dyn Fn>` | none | unsupported | |
 | `for x in v` / `v.iter()` / `&v` | `for x in v` | direct | |
@@ -324,7 +363,8 @@ bindings.
 | `Weak<T>` | none | unsupported | 1.0 added `WeakPointer` (unverified) |
 | `RefCell::new`, `.borrow()`, `.borrow_mut()` | `mojo_rt.cell.RefCell` | shim | **no dynamic borrow flags**: code that would panic with BorrowMutError keeps running (TODO on every use). Mutation through `&self` needs restructuring |
 | `Cell::get/set/replace` | `mojo_rt.cell.Cell` | shim | `set` needs `mut` access in Mojo |
-| `Mutex`, `RwLock`, atomics | none | unsupported | |
+| `Mutex<T>`, `RwLock<T>` (parking_lot, std, spin) | `mojo_rt.sync.Mutex[T]` / `RwLock[T]` | shim | **no mutual exclusion** (single-threaded; TODO on every use). `lock()/read()/write()` return a reference; `let g = m.lock();` becomes `ref g = m.lock()`, and std's `.lock().unwrap()` drops the `unwrap`. `try_*` stays unsupported |
+| atomics | none | unsupported | |
 
 ## 12. Integer and float semantics
 
@@ -409,4 +449,20 @@ has `async` support, but its runtime differs). That is a manual port.
 11. `@staticmethod` calls on an unbound generic struct (`Point.new(x, y)`) and whether
     the parameters are inferred.
 12. `from . import foo` in a package `__init__.mojo` when modules import each other
-    (circular imports).
+    (circular imports). Cross-module impl merging adds more of these.
+13. `mojo_rt.ops`: `T == Float32` as a compile-time type comparison inside `comptime if`
+    (the 1.0 notes show `where Self.T == Int`), refinement of `T` by `conforms_to(T, RAdd)`
+    so that `a + b` resolves through the trait (the manual's `represent` example does this
+    for `Writable`), `rebind[Float32](a)` on a `T` that is `Float32` only in that branch,
+    and `comptime assert False, "..."` in a discarded branch.
+14. Calling `Self.T` methods inside a method gated with `where conforms_to(Self.T, X)`.
+    The manual documents the clause (`def sort() where conforms_to(Self.T, Comparable):`)
+    but not the refinement inside the body.
+15. Origin parameter spellings `ImmOrigin` / `MutOrigin` on a struct, `Pointer(to=x)` as the
+    constructor after the `UnsafePointer`/`Pointer` merge, and `Foo[_]` to leave a struct's
+    origin parameter unbound in a signature.
+16. `def(mut T) -> R` as a function type with an argument convention.
+17. `self` as an ordinary parameter name of a free function (extension impls).
+18. Inference of `U` from the closure's return type in `rt_option.map(opt, f)`.
+19. A struct field and a method with the same name (Rust getters such as `fn id(&self)`
+    next to `id: u32`) are emitted as is; Mojo may reject the clash.

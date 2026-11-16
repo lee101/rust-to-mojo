@@ -37,7 +37,7 @@ The output directory contains:
 | file | what |
 | --- | --- |
 | `<crate>/__init__.mojo`, `<crate>/<mod>.mojo` ... | the module tree (`mod` → package dirs) |
-| `mojo_rt/` | the runtime shim (Option/Vec helpers, Rust integer semantics, Cell/RefCell); `--no-runtime` skips it |
+| `mojo_rt/` | the runtime shim (Option/Vec helpers, Rust integer semantics, Cell/RefCell, `ops` generic arithmetic, `erased` field placeholder, `sync` lock stand-ins); `--no-runtime` skips it |
 | `coverage.json` | per-crate and per-file records: every item with status `translated` / `partial` / `stubbed` / `skipped` and its reasons |
 | `coverage.md` | human summary: totals, top stub reasons, top TODO notes, per-file table |
 | `hints.json` | with `--optimize-hints`: optimisation candidates (see below) |
@@ -54,8 +54,12 @@ Compile the output with the output directory on the import path, e.g.
 ```
 
 * `src/symbols.rs`: pass 1 over the whole crate. It collects structs (fields, tuple-ness),
-  enums (variant shapes), traits, user method names, `Result`-returning functions,
-  `Copy` types and the module set.
+  enums (variant shapes and payload types), traits, every fn/method signature, `Result`-returning
+  functions, `Copy` types and the module set. Pass 1b (`probe_fields`) decides which struct
+  fields are erased or become `Pointer`s, and pass 1c moves impls written outside their
+  type's module to that module.
+* `src/lower/infer.rs`: call-site inference of closure parameter/return types and
+  `.into()` targets from crate signatures.
 * `src/lower/`: syn → IR. `items.rs` (modules, structs, enums, traits, impl merging,
   functions), `expr.rs` (statements, expressions, light type inference, method
   mapping), `pat.rs` (pattern → conditions + bindings), `macros.rs`, `derive.rs`,
@@ -86,7 +90,7 @@ borrowing Copy arguments instead of copying them, and Debug → Writable output 
 
 ## Results
 
-* **Golden tests:** 26 Rust inputs, each with its expected Mojo and expected per-item
+* **Golden tests:** 30 Rust inputs, each with its expected Mojo and expected per-item
   coverage (`tests/golden/*.rs`, `*.mojo`, `*.coverage.txt`). There is also a crate-mode
   layout test and a never-panic robustness test. See the
   [GPUI hand review](reports/gpui/geometry-review.md) for a critical read of real output.
@@ -94,13 +98,18 @@ borrowing Copy arguments instead of copying them, and Debug → Writable output 
 
   | scope | items | translated | partial | stubbed | emitted % | clean % |
   | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-  | `geometry.rs` | 286 | 127 | 101 | 57 | 80.0 | 44.6 |
-  | `color.rs` | 75 | 40 | 11 | 23 | 68.9 | 54.1 |
-  | whole crate | 4637 | 1278 | 595 | 2681 | 41.1 | 28.1 |
+  | `geometry.rs` (pass 1) | 286 | 127 | 101 | 57 | 80.0 | 44.6 |
+  | `geometry.rs` (pass 2) | 291 | 196 | 44 | 50 | 82.8 | 67.6 |
+  | `color.rs` (pass 1) | 75 | 40 | 11 | 23 | 68.9 | 54.1 |
+  | `color.rs` (pass 2) | 77 | 42 | 11 | 23 | 69.7 | 55.3 |
+  | whole crate (pass 1) | 4637 | 1278 | 595 | 2681 | 41.1 | 28.1 |
+  | whole crate (pass 2) | 4700 | 1802 | 849 | 1923 | 58.0 | 39.4 |
 
-  The crate total is dominated by stubbed runtime types (`dyn Trait` fields, locks,
-  borrowed fields) that cascade to their methods. See [reports/gpui/](reports/gpui/) for
-  the ranked reasons, the per-file table and the hand review.
+  Pass 2 stopped the stub cascade: a struct with a `dyn Trait`, lock or borrowed field now
+  translates, and only the code that touches the problematic field is stubbed. (Item counts
+  moved slightly: method-less marker impls now get a record of their own, and `#[test]`
+  methods inside impls of formerly stubbed types are now counted as skipped.)
+  See [reports/gpui/](reports/gpui/) for the ranked reasons, the per-file table and the hand review.
 
 ## Pipeline: translate → fix-up passes → optimisation passes
 
@@ -146,13 +155,24 @@ with capture lists, `format!`/`println!`/`assert!`/`panic!`/`vec!`, `Rc`/`RefCel
 Rust integer semantics via `mojo_rt`, crate mode with `mod` resolution, coverage reports and
 optimisation hints.
 
-Next, ranked by GPUI impact (see the corpus report):
-1. local type inference for closures, and lowering iterator adapter chains to loops;
-2. merging impls defined in other modules into the defining struct;
-3. a value-level `Result` shim, plus `match` on `Ok`/`Err` → `try`/`except`;
-4. `Ordering`/`partial_cmp`, `Hash` and `Iterator` impls;
-5. typed `raises E`;
-6. run `scripts/check_mojo.sh` on a real Mojo 1.0 toolchain and work through the
+Done in pass 2: generic arithmetic through `mojo_rt.ops` compile-time dispatch (MAPPING.md
+6.1); field-level erasure (`mojo_rt.erased.Erased`) instead of stubbing whole types;
+`Mutex`/`RwLock` → `mojo_rt.sync`; borrowed fields → `Pointer[T, Self.origin_a]`; closure
+parameter/return inference from crate signatures and `Option` combinators; `Fn(&mut T)` →
+`def(mut T)`; `&dyn Trait` arguments as generic parameters; `Option<&T>` arguments;
+`.into()` targets from argument and variant types; cross-module impl merging; extension
+impls as free functions; `-> impl Trait` with a concrete tail.
+[docs/gpui-runtime-port.md](docs/gpui-runtime-port.md) proposes the hand design for
+GPUI's runtime core (App, entities, Window, elements, platform on SDL3 + wgpu-native).
+
+Next, ranked by the pass-2 corpus report:
+1. closures whose types depend on a callee's own generic parameters (`cx.new(|cx| ..)`,
+   `on_mouse_event::<E>`), and return-type inference for block-bodied closures;
+2. type-erased callables for `Box<dyn Fn..>` fields and arguments (the design doc's
+   closure objects), which would un-erase most `Erased` fields;
+3. `let`-else, value-level `Result`, and bounds on generic traits (`IntoIterator<Item = T>`);
+4. `Ordering`/`partial_cmp`, `Hash`, `Sum`, `TryFrom` and `Iterator` impls;
+5. run `scripts/check_mojo.sh` on a real Mojo 1.0 toolchain and work through the
    unverified-syntax list in MAPPING.md.
 
 ## Licence
