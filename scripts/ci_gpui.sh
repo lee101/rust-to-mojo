@@ -28,7 +28,7 @@ mkdir -p "$OUT/geometry_pkg/geometry"
 cp "$OUT/geometry/geometry.mojo" "$OUT/geometry_pkg/geometry/__init__.mojo"
 fail=0
 check() { # name pkgdir includedir
-  if "$MOJO" package -I "$3" "$2" -o "$LOGDIR/$1.mojopkg" >"$LOGDIR/$1.log" 2>&1; then
+  if "$MOJO" precompile -I "$3" "$2" -o "$LOGDIR/$1.mojoc" >"$LOGDIR/$1.log" 2>&1; then
     echo "ok    $1"
   else
     echo "FAIL  $1 ($(grep -c 'error:' "$LOGDIR/$1.log") errors)"

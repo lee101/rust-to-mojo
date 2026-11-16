@@ -27,9 +27,10 @@ record() { # name status log
 }
 
 "$MOJO" --version | tee "$LOGDIR/version.txt"
+{ "$MOJO" --help; "$MOJO" precompile --help; "$MOJO" build --help; } >"$LOGDIR/help.txt" 2>&1
 
 # 1. runtime shim
-if "$MOJO" package "$ROOT/mojo_rt" -o "$WORK/mojo_rt.mojopkg" >"$LOGDIR/mojo_rt.log" 2>&1; then
+if "$MOJO" precompile "$ROOT/mojo_rt" -o "$WORK/mojo_rt.mojoc" >"$LOGDIR/mojo_rt.log" 2>&1; then
   record mojo_rt ok "$LOGDIR/mojo_rt.log"
 else
   record mojo_rt FAIL "$LOGDIR/mojo_rt.log"
@@ -42,7 +43,7 @@ for f in "$ROOT"/tests/golden/*.mojo; do
   mkdir -p "$WORK/$mod"
   cp "$f" "$WORK/$mod/__init__.mojo"
   log="$LOGDIR/$stem.log"
-  if "$MOJO" package -I "$ROOT" "$WORK/$mod" -o "$WORK/$mod.mojopkg" >"$log" 2>&1; then
+  if "$MOJO" precompile -I "$ROOT" "$WORK/$mod" -o "$WORK/$mod.mojoc" >"$log" 2>&1; then
     record "$stem" ok "$log"
   else
     record "$stem" FAIL "$log"
