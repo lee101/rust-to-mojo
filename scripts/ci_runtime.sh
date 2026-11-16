@@ -26,7 +26,7 @@ for t in "$ROOT"/tests/runtime/*.mojo; do
   if ! "$MOJO" run --fp-mode contract=off -I "$ROOT" -I "$WORK/mods" "$t" >"$LOGDIR/$name.mojo.out" 2>"$LOGDIR/$name.mojo.err"; then
     st="FAIL(mojo)"
   fi
-  if ! rustc --edition 2021 -O -A warnings -o "$WORK/$name" "$rs" 2>"$LOGDIR/$name.rustc.err" \
+  if ! rustc --edition 2024 -O -A warnings -o "$WORK/$name" "$rs" 2>"$LOGDIR/$name.rustc.err" \
      || ! "$WORK/$name" >"$LOGDIR/$name.rust.out"; then
     st="FAIL(rust)"
   fi
